@@ -109,30 +109,31 @@ export async function POST(req: NextRequest) {
         const existing = entryMap.get(key)
         if (!existing) continue // entry not in DB
 
-        // Skip if result is identical (idempotent — same file uploaded twice)
+        // Skip result UPDATE if identical, but always collect splits
         const newPlace = evt.eventplace ? parseInt(evt.eventplace) || null : null
         const newDq = evt.dq_check || null
-        if (
+        const resultUnchanged = (
           existing.result_time === evt.time_seconds &&
           existing.result_place === newPlace &&
           existing.result_dq === newDq
-        ) {
+        )
+
+        if (resultUnchanged) {
           skippedEntries++
-          continue
+        } else {
+          updateOps.push(
+            nt.from('nt_entries').update({
+              result_time: evt.time_seconds,
+              result_place: newPlace,
+              result_dq: newDq,
+              result_heat: evt.heat || null,
+              result_lane: evt.lane || null,
+            }).eq('id', existing.id)
+          )
+          updatedEntries++
         }
 
-        updateOps.push(
-          nt.from('nt_entries').update({
-            result_time: evt.time_seconds,
-            result_place: newPlace,
-            result_dq: newDq,
-            result_heat: evt.heat || null,
-            result_lane: evt.lane || null,
-          }).eq('id', existing.id)
-        )
-        updatedEntries++
-
-        // Collect splits
+        // Always collect splits (even if result unchanged — splits may be missing from prior import)
         if (evt.splits?.length > 0) {
           splitEntryIds.push(existing.id)
           for (const sp of evt.splits) {
@@ -158,24 +159,25 @@ export async function POST(req: NextRequest) {
       if (!match) continue
       const newPlace = relay.eventplace ? parseInt(relay.eventplace) || null : null
       const newDq = relay.dq_check || null
-      if (match.result_time === relay.time_seconds && match.result_dq === newDq) continue
-      updateOps.push(
-        nt.from('nt_relays').update({
-          result_time: relay.time_seconds,
-          result_place: newPlace,
-          result_dq: newDq,
-          heat: relay.heat || null,
-          lane: relay.lane || null,
-        }).eq('id', match.id)
-      )
-      updatedRelays++
+      const relayUnchanged = match.result_time === relay.time_seconds && match.result_dq === newDq
+      if (!relayUnchanged) {
+        updateOps.push(
+          nt.from('nt_relays').update({
+            result_time: relay.time_seconds,
+            result_place: newPlace,
+            result_dq: newDq,
+            heat: relay.heat || null,
+            lane: relay.lane || null,
+          }).eq('id', match.id)
+        )
+        updatedRelays++
+      }
+      // Always track relay for leg split processing (even if result unchanged)
       updatedRelayIds.push(match.id)
 
       // Collect relay leg splits: match parsed legs to DB legs by leg_number
       const hasLegSplits = relay.legs?.some((l: any) => l.splits && l.splits.length > 0)
       if (hasLegSplits) {
-        // We'll fetch DB legs after updates execute (below)
-        // Store relay info for later processing
         ;(match as any)._parsedLegs = relay.legs
       }
     }
