@@ -126,7 +126,7 @@ export default async function ResultsPage() {
           <p className="text-navy-400 text-sm mt-2">This page auto-refreshes every 30 seconds</p>
         </div>
       ) : (
-        <ResultsClient events={sortedEvents} />
+        <ResultsClient events={sortedEvents} meetCourse={campaign?.meet_course || 'S'} />
       )}
     </div>
   )

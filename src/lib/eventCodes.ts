@@ -30,16 +30,16 @@ export function eventDistance(hy3Code: string): number {
   return isNaN(d) ? 0 : d
 }
 
-/** Extract per-leg distance for a relay event code */
-export function relayLegDistance(hy3Code: string): number {
-  return eventDistance(hy3Code)
+/** Pool length in metres from meet_course code */
+export function courseLength(meetCourse: string | null | undefined): number {
+  return meetCourse === 'L' ? 50 : 25
 }
 
 export function relayEventName(hy3Code: string): string {
   const trimmed = hy3Code.toUpperCase().trim()
   const letter = trimmed.slice(-1)
-  const legDistance = parseInt(trimmed.slice(0, -1))
+  const totalDistance = parseInt(trimmed.slice(0, -1))
   const stroke = RELAY_STROKE_MAP[letter]
-  if (stroke && legDistance) return `4x${legDistance} ${stroke} Relay`
+  if (stroke && totalDistance) return `4x${totalDistance / 4} ${stroke} Relay`
   return hy3Code
 }
