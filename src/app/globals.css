@@ -1,0 +1,83 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bsm-50: #edf6fd;
+  --color-bsm-100: #d1e9fa;
+  --color-bsm-200: #a3d3f5;
+  --color-bsm-300: #6ab8ec;
+  --color-bsm-400: #3da3e6;
+  --color-bsm-500: #1b8bd5;
+  --color-bsm-600: #166ea7;
+  --color-bsm-700: #125580;
+  --color-bsm-800: #0e3d5a;
+  --color-bsm-900: #0a2638;
+
+  --color-purple-50: #f3f0ff;
+  --color-purple-100: #e6dfff;
+  --color-purple-200: #c4b3ff;
+  --color-purple-300: #9b7fff;
+  --color-purple-400: #6b3fff;
+  --color-purple-500: #4a00e8;
+  --color-purple-600: #3800b0;
+  --color-purple-700: #280080;
+  --color-purple-800: #1d005c;
+  --color-purple-900: #140070;
+
+  --color-dark-50: #f8f8f8;
+  --color-dark-100: #efefef;
+  --color-dark-200: #d9d9d9;
+  --color-dark-300: #b0b0b0;
+  --color-dark-400: #888888;
+  --color-dark-500: #666666;
+  --color-dark-600: #4d4d4d;
+  --color-dark-700: #333333;
+  --color-dark-800: #262626;
+  --color-dark-900: #191919;
+  --color-dark-950: #0d0d0d;
+
+  --font-display: 'Montserrat', sans-serif;
+  --font-body: 'Montserrat', sans-serif;
+  --font-accent: 'Libre Baskerville', serif;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--color-dark-900);
+  background-color: #ffffff;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+}
+
+/* Subtle blue glow pulse */
+@keyframes subtle-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(61, 163, 230, 0); }
+  50% { box-shadow: 0 0 20px 4px rgba(61, 163, 230, 0.15); }
+}
+
+.animate-subtle-glow {
+  animation: subtle-glow 4s ease-in-out infinite;
+}
+
+/* Shimmer text effect for footer branding */
+@keyframes shimmer-bsm {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.animate-shimmer-bsm {
+  background: linear-gradient(
+    90deg,
+    #3da3e6 0%,
+    #140070 25%,
+    #3da3e6 50%,
+    #140070 75%,
+    #3da3e6 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer-bsm 3s linear infinite;
+}
