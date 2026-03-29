@@ -32,8 +32,11 @@ function StatusBadge({ status }: { status: 'DQ' | 'NS' }) {
 }
 
 function SplitModal({ name, event, courseLen, splits, resultTime, onClose }: { name: string, event: string, courseLen: number, splits: any[], resultTime?: number | null, onClose: () => void }) {
+  // Deduplicate splits by marker (HY3 files can produce duplicate G1 records)
+  const seenMarkers = new Set<number>()
+  const deduped = splits.filter(s => { if (seenMarkers.has(s.marker)) return false; seenMarkers.add(s.marker); return true })
   // Add finish time as final split if result_time exists and isn't already in splits
-  const sorted = [...splits].sort((a, b) => a.marker - b.marker)
+  const sorted = [...deduped].sort((a, b) => a.marker - b.marker)
   const lastMarker = sorted.length > 0 ? sorted[sorted.length - 1].marker : 0
   if (resultTime && resultTime > 0 && (sorted.length === 0 || sorted[sorted.length - 1].time !== resultTime)) {
     sorted.push({ marker: lastMarker + 1, time: resultTime, isFinish: true })

@@ -67,7 +67,13 @@ export default async function ResultsPage() {
           given_name: leg.given_name || swimmer?.given_name || null,
           surname: leg.surname || swimmer?.surname || null,
           age_group: leg.age_group || swimmer?.age_group || null,
-          splits: relayLegSplitsMap[leg.id] || [],
+          splits: (() => {
+            // Renumber relay leg split markers to be per-leg (1-based)
+            // so the SplitModal shows per-leg distances (25m, 50m) not relay-cumulative (175m, 200m)
+            const raw = relayLegSplitsMap[leg.id] || []
+            const sorted = [...raw].sort((a: any, b: any) => a.marker - b.marker)
+            return sorted.map((s: any, i: number) => ({ ...s, marker: i + 1 }))
+          })(),
         }
       })
 
