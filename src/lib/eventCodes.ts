@@ -23,6 +23,18 @@ export function eventName(hy3Code: string): string {
   return hy3Code
 }
 
+/** Extract total swim distance in metres from an event code */
+export function eventDistance(hy3Code: string): number {
+  const trimmed = hy3Code.toUpperCase().trim()
+  const d = parseInt(trimmed.slice(0, -1))
+  return isNaN(d) ? 0 : d
+}
+
+/** Extract per-leg distance for a relay event code */
+export function relayLegDistance(hy3Code: string): number {
+  return eventDistance(hy3Code)
+}
+
 export function relayEventName(hy3Code: string): string {
   const trimmed = hy3Code.toUpperCase().trim()
   const letter = trimmed.slice(-1)

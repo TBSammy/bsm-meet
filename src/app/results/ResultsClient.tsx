@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { formatTime } from '@/lib/utils'
+import { eventDistance as getEventDistance, relayLegDistance } from '@/lib/eventCodes'
 import { Filter, X, Search, ChevronDown, ChevronRight, ChevronsUpDown, Users } from 'lucide-react'
 
 function ordinal(n: number): string {
@@ -30,11 +31,8 @@ function StatusBadge({ status }: { status: 'DQ' | 'NS' }) {
   )
 }
 
-function SplitModal({ name, event, eventDistance, splits, onClose }: { name: string, event: string, eventDistance: number, splits: any[], onClose: () => void }) {
+function SplitModal({ name, event, poolLength, splits, onClose }: { name: string, event: string, poolLength: number, splits: any[], onClose: () => void }) {
   const sorted = [...splits].sort((a, b) => a.marker - b.marker)
-  const maxMarker = sorted.length > 0 ? sorted[sorted.length - 1].marker : 1
-  const isOrdinal = maxMarker <= sorted.length
-  const interval = isOrdinal && eventDistance > 0 ? eventDistance / maxMarker : 1
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
@@ -65,7 +63,7 @@ function SplitModal({ name, event, eventDistance, splits, onClose }: { name: str
                 const prevTime = idx > 0 ? sorted[idx - 1].time : null
                 const splitTime = sp.time !== null && prevTime !== null ? sp.time - prevTime : null
                 const hasIssue = sp.time === null || sp.time === 0
-                const distance = Math.round(sp.marker * interval)
+                const distance = poolLength > 0 ? sp.marker * poolLength : sp.marker
 
                 return (
                   <tr key={sp.marker} className={`border-b border-navy-100 ${hasIssue ? 'bg-amber-50' : ''}`}>
@@ -140,8 +138,12 @@ function getLegTime(legs: any[], legIndex: number): number | null {
   return lastSplit.time - prevLastSplit.time
 }
 
-function RelayLegsExpansion({ legs, eventNum, eventName }: { legs: any[], eventNum: number, eventName: string }) {
+function RelayLegsExpansion({ legs, eventNum, eventName, eventCode, onShowSplits }: {
+  legs: any[], eventNum: number, eventName: string, eventCode: string,
+  onShowSplits: (name: string, event: string, eventDistance: number, splits: any[]) => void
+}) {
   if (!legs || legs.length === 0) return null
+  const legDist = relayLegDistance(eventCode)
 
   return (
     <div className="bg-navy-50/30 border-t border-navy-100">
@@ -166,8 +168,14 @@ function RelayLegsExpansion({ legs, eventNum, eventName }: { legs: any[], eventN
                 <td className="px-2 py-1.5 text-navy-700">{swimmerName}</td>
                 <td className="px-2 py-1.5 text-navy-400 hidden sm:table-cell">{leg.age_group || '—'}</td>
                 <td className="text-right px-2 py-1.5 font-mono text-navy-700">
-                  {legTime ? formatTime(legTime) : '—'}
-                  {hasSplits && <span className="text-navy-300 ml-0.5" title="Split data available">*</span>}
+                  {hasSplits && legTime ? (
+                    <button
+                      onClick={() => onShowSplits(swimmerName, `Event ${eventNum} — ${eventName} (Leg ${leg.leg_number || idx + 1})`, legDist, leg.splits)}
+                      className="text-blue-600 underline decoration-dotted cursor-pointer font-semibold hover:text-blue-800"
+                    >
+                      {formatTime(legTime)}
+                    </button>
+                  ) : legTime ? formatTime(legTime) : '—'}
                 </td>
               </tr>
             )
@@ -181,7 +189,7 @@ function RelayLegsExpansion({ legs, eventNum, eventName }: { legs: any[], eventN
 export function ResultsClient({ events }: { events: [number, { name: string, eventGender: string, results: any[] }][] }) {
   const [filter, setFilter] = useState<'all' | 'individual' | 'relay'>('all')
   const [search, setSearch] = useState('')
-  const [showSplits, setShowSplits] = useState<{ name: string, event: string, eventDistance: number, splits: any[] } | null>(null)
+  const [showSplits, setShowSplits] = useState<{ name: string, event: string, poolLength: number, splits: any[] } | null>(null)
   const [collapsedEvents, setCollapsedEvents] = useState<Set<number>>(new Set())
   const [expandedRelays, setExpandedRelays] = useState<Set<string>>(new Set())
 
@@ -372,8 +380,9 @@ export function ResultsClient({ events }: { events: [number, { name: string, eve
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation()
-                                      const dist = parseInt(r.event_code) || parseInt(ev.name) || 0
-                                      setShowSplits({ name: swimmerName, event: `Event ${eventNum} — ${ev.name}`, eventDistance: dist, splits: r.splits })
+                                      const dist = getEventDistance(r.event_code || '')
+                                      const pLen = r.splits.length > 0 ? dist / r.splits.length : 25
+                                      setShowSplits({ name: swimmerName, event: `Event ${eventNum} — ${ev.name}`, poolLength: pLen, splits: r.splits })
                                     }}
                                     className="text-blue-600 underline decoration-dotted cursor-pointer font-semibold hover:text-blue-800"
                                   >
@@ -387,7 +396,14 @@ export function ResultsClient({ events }: { events: [number, { name: string, eve
                             {isRelayExpanded && hasLegs && (
                               <tr>
                                 <td colSpan={5} className="p-0">
-                                  <RelayLegsExpansion legs={r.legs} eventNum={eventNum} eventName={ev.name} />
+                                  <RelayLegsExpansion
+                                    legs={r.legs} eventNum={eventNum} eventName={ev.name}
+                                    eventCode={r.event_code || ''}
+                                    onShowSplits={(name, event, legDist, splits) => {
+                                      const pLen = splits.length > 0 ? legDist / splits.length : 25
+                                      setShowSplits({ name, event, poolLength: pLen, splits })
+                                    }}
+                                  />
                                 </td>
                               </tr>
                             )}
@@ -424,7 +440,7 @@ export function ResultsClient({ events }: { events: [number, { name: string, eve
         <SplitModal
           name={showSplits.name}
           event={showSplits.event}
-          eventDistance={showSplits.eventDistance}
+          poolLength={showSplits.poolLength}
           splits={showSplits.splits}
           onClose={() => setShowSplits(null)}
         />

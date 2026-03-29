@@ -2,23 +2,34 @@ import { createServerClient } from './server'
 import { CAMPAIGN_ID } from './config'
 import type { SessionPlanJson } from '../sessions'
 
+// Supabase PostgREST max-rows = 1000. Fetch all pages.
+async function fetchAllPages(sb: ReturnType<typeof createServerClient>, schema: string, table: string, filters: Record<string, string>, orders?: string[]) {
+  const PAGE = 1000
+  let offset = 0
+  const all: any[] = []
+  while (true) {
+    let q = sb.schema(schema as any).from(table).select('*').range(offset, offset + PAGE - 1)
+    for (const [k, v] of Object.entries(filters)) q = q.eq(k, v)
+    if (orders) for (const o of orders) q = q.order(o)
+    const { data } = await q
+    if (!data || data.length === 0) break
+    all.push(...data)
+    if (data.length < PAGE) break
+    offset += PAGE
+  }
+  return all
+}
+
 export async function getSwimmers() {
   const sb = createServerClient()
-  const { data } = await sb.schema('nt_demo').from('nt_swimmers')
-    .select('*').eq('campaign_id', CAMPAIGN_ID).order('surname')
-  return data || []
+  return fetchAllPages(sb, 'nt_demo', 'nt_swimmers', { campaign_id: CAMPAIGN_ID })
 }
 
 export async function getEntries() {
   const sb = createServerClient()
-  const [{ data: entries }, { data: swimmers }] = await Promise.all([
-    sb.schema('nt_demo').from('nt_entries')
-      .select('*')
-      .eq('campaign_id', CAMPAIGN_ID)
-      .order('event_number').order('result_heat').order('result_lane'),
-    sb.schema('nt_demo').from('nt_swimmers')
-      .select('*')
-      .eq('campaign_id', CAMPAIGN_ID),
+  const [entries, swimmers] = await Promise.all([
+    fetchAllPages(sb, 'nt_demo', 'nt_entries', { campaign_id: CAMPAIGN_ID }, ['event_number', 'result_heat', 'result_lane']),
+    fetchAllPages(sb, 'nt_demo', 'nt_swimmers', { campaign_id: CAMPAIGN_ID }),
   ])
   // Join in code — no FK between nt_entries and nt_swimmers
   const swimmerMap = new Map((swimmers || []).map((s: any) => [s.member_id, s]))
@@ -53,19 +64,14 @@ export async function getSessionPlan(): Promise<SessionPlanJson | null> {
 
 export async function getSplits() {
   const sb = createServerClient()
-  const { data } = await sb.schema('nt_demo').from('nt_splits')
-    .select('*')
-    .order('marker')
-  return data || []
+  return fetchAllPages(sb, 'nt_demo', 'nt_splits', {}, ['marker'])
 }
 
 export async function getSwimmerMap() {
   const sb = createServerClient()
-  const { data } = await sb.schema('nt_demo').from('nt_swimmers')
-    .select('member_id, given_name, surname, age_group')
-    .eq('campaign_id', CAMPAIGN_ID)
+  const data = await fetchAllPages(sb, 'nt_demo', 'nt_swimmers', { campaign_id: CAMPAIGN_ID })
   const map = new Map<string, { given_name: string; surname: string; age_group: string }>()
-  for (const s of data || []) {
+  for (const s of data) {
     map.set(s.member_id, s)
   }
   return map
