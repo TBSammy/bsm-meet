@@ -31,8 +31,13 @@ function StatusBadge({ status }: { status: 'DQ' | 'NS' }) {
   )
 }
 
-function SplitModal({ name, event, courseLen, splits, onClose }: { name: string, event: string, courseLen: number, splits: any[], onClose: () => void }) {
+function SplitModal({ name, event, courseLen, splits, resultTime, onClose }: { name: string, event: string, courseLen: number, splits: any[], resultTime?: number | null, onClose: () => void }) {
+  // Add finish time as final split if result_time exists and isn't already in splits
   const sorted = [...splits].sort((a, b) => a.marker - b.marker)
+  const lastMarker = sorted.length > 0 ? sorted[sorted.length - 1].marker : 0
+  if (resultTime && resultTime > 0 && (sorted.length === 0 || sorted[sorted.length - 1].time !== resultTime)) {
+    sorted.push({ marker: lastMarker + 1, time: resultTime, isFinish: true })
+  }
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
@@ -189,7 +194,7 @@ export function ResultsClient({ events, meetCourse }: { events: [number, { name:
   const courseLen = getCourseLength(meetCourse)
   const [filter, setFilter] = useState<'all' | 'individual' | 'relay'>('all')
   const [search, setSearch] = useState('')
-  const [showSplits, setShowSplits] = useState<{ name: string, event: string, splits: any[] } | null>(null)
+  const [showSplits, setShowSplits] = useState<{ name: string, event: string, splits: any[], resultTime?: number | null } | null>(null)
   const [collapsedEvents, setCollapsedEvents] = useState<Set<number>>(new Set())
   const [expandedRelays, setExpandedRelays] = useState<Set<string>>(new Set())
 
@@ -380,7 +385,7 @@ export function ResultsClient({ events, meetCourse }: { events: [number, { name:
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation()
-                                      setShowSplits({ name: swimmerName, event: `Event ${eventNum} — ${ev.name}`, splits: r.splits })
+                                      setShowSplits({ name: swimmerName, event: `Event ${eventNum} — ${ev.name}`, splits: r.splits, resultTime: r.result_time })
                                     }}
                                     className="text-blue-600 underline decoration-dotted cursor-pointer font-semibold hover:text-blue-800"
                                   >
@@ -438,6 +443,7 @@ export function ResultsClient({ events, meetCourse }: { events: [number, { name:
           event={showSplits.event}
           courseLen={courseLen}
           splits={showSplits.splits}
+          resultTime={showSplits.resultTime}
           onClose={() => setShowSplits(null)}
         />
       )}
