@@ -175,10 +175,43 @@ export async function POST(req: NextRequest) {
       // Always track relay for leg split processing (even if result unchanged)
       updatedRelayIds.push(match.id)
 
-      // Collect relay leg splits: match parsed legs to DB legs by leg_number
-      const hasLegSplits = relay.legs?.some((l: any) => l.splits && l.splits.length > 0)
-      if (hasLegSplits) {
-        ;(match as any)._parsedLegs = relay.legs
+      // Collect ALL relay splits (recombine from parser's per-leg distribution + raw)
+      // The parser's distribution is broken for non-4-split relays, so we recombine and redistribute
+      const allRelaySplits: { marker: number; time: number | null }[] = []
+      if (relay.legs) {
+        for (const leg of relay.legs) {
+          if (leg.splits) allRelaySplits.push(...leg.splits)
+        }
+      }
+      // Also check for raw undistributed splits (parser preserves these when legs.length !== 4)
+      if ((relay as any).splits) {
+        allRelaySplits.push(...(relay as any).splits)
+      }
+      // Deduplicate by marker (same marker from both sources)
+      const seenMarkers = new Set<number>()
+      const dedupedSplits = allRelaySplits
+        .sort((a, b) => a.marker - b.marker)
+        .filter(s => { if (seenMarkers.has(s.marker)) return false; seenMarkers.add(s.marker); return true })
+
+      if (dedupedSplits.length > 0) {
+        // Calculate how many split markers correspond to each leg
+        const courseLength = (result.meet.course === 'L') ? 50 : 25
+        const splitsPerLeg = relay.leg_distance ? Math.round(relay.leg_distance / courseLength) : 1
+
+        // Redistribute by marker range: leg N gets markers ((N-1)*spl+1) to (N*spl)
+        const redistributedLegs = [1, 2, 3, 4].map((legNum) => {
+          const startMarker = (legNum - 1) * splitsPerLeg
+          const endMarker = legNum * splitsPerLeg
+          const legSplits = dedupedSplits.filter(s => s.marker > startMarker && s.marker <= endMarker)
+          // Last leg also gets any remaining splits beyond 4*splitsPerLeg
+          if (legNum === 4) {
+            const extra = dedupedSplits.filter(s => s.marker > 4 * splitsPerLeg)
+            legSplits.push(...extra)
+          }
+          return { leg: legNum, splits: legSplits }
+        })
+
+        ;(match as any)._parsedLegs = redistributedLegs
       }
     }
 
