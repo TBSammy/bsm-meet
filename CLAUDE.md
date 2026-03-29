@@ -7,7 +7,7 @@
 - **Supabase:** `bahizyziqhdocycjmdhq` — uses `nt_demo` schema (shared with admin site's NT Management)
 - **Deploy:** Vercel at `.vercel.app` (no custom domain)
 - **Purpose:** Public swimmer-facing event site for Brisbane Southside Masters SC Meet 2025
-- **Campaign ID:** `e7f71121-abd2-4282-8de1-52fb228dd5a2`
+- **Campaign ID:** `4862b7bb-9958-4d97-8980-0976a8aa52b8`
 
 ## Branding
 
@@ -18,7 +18,7 @@
 ## Critical Rules
 
 1. **Run `npx next build` locally before every push** — TS strict mode errors silently block Vercel deploys
-2. **Campaign UUID must match** — verify `config.ts` AND Vercel `SWIMFAST_CAMPAIGN_ID` env var = `e7f71121-abd2-4282-8de1-52fb228dd5a2`
+2. **Campaign UUID must match** — verify `config.ts` AND Vercel `SWIMFAST_CAMPAIGN_ID` env var = `4862b7bb-9958-4d97-8980-0976a8aa52b8`
 3. **This is a PUBLIC site** — no admin version stamp, no admin features
 4. **NEVER modify the HY3 parser** without explicit user confirmation — shared across repos
 
