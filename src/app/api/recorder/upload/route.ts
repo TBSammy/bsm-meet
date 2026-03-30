@@ -262,6 +262,9 @@ export async function POST(req: NextRequest) {
       }
 
       // Match parsed legs to DB legs and insert splits
+      // Track processed relay IDs to prevent duplicate splits when multiple parsed relays
+      // match the same DB relay (same event_code + team_code + age)
+      const processedRelayIds = new Set<string>()
       for (const relay of allRelays) {
         const match = (existingRelays || []).find((r: any) =>
           r.event_code === relay.event_code &&
@@ -269,6 +272,8 @@ export async function POST(req: NextRequest) {
           r.age === relay.age
         )
         if (!match || !(match as any)._parsedLegs) continue
+        if (processedRelayIds.has(match.id)) continue
+        processedRelayIds.add(match.id)
 
         const dbLegs = dbLegsByRelay.get(match.id) || []
         const parsedLegs = (match as any)._parsedLegs as any[]
