@@ -418,31 +418,20 @@ export function parseHY3(text: string): HY3ParseResult {
   }
 
   // ── Post-processing: distribute relay splits to legs ────────────────
+  // Ceil-based equal-group distribution on sorted marker ORDER.
+  // Works for all step sizes (1, 2, 4) regardless of course/venue.
   for (const team of teams) {
     for (const relay of team.relays) {
-      if (!(relay as any).splits?.length || relay.legs.length !== 4) continue;
+      if (!(relay as any).splits?.length || relay.legs.length === 0) continue;
 
-      const splits = (relay as any).splits as HY3Split[];
-      const total = splits.length;
+      const sorted = ((relay as any).splits as HY3Split[]).sort((a, b) => a.marker - b.marker);
+      const legCount = relay.legs.length;
+      const perLeg = Math.ceil(sorted.length / legCount);
 
-      if (
-        total === 4 &&
-        splits[0].marker === 1 &&
-        splits[1].marker === 2 &&
-        splits[2].marker === 3 &&
-        splits[3].marker === 4
-      ) {
-        for (let i = 0; i < 4; i++) relay.legs[i].splits = [splits[i]];
-      } else if (total === 1) {
-        for (const leg of relay.legs) leg.splits = [splits[0]];
-      } else {
-        const perLeg = Math.floor(total / 4);
-        const remainder = total % 4;
-        for (let i = 0; i < 4; i++) {
-          const start = i * perLeg;
-          const end = (i + 1) * perLeg + (i === 3 ? remainder : 0);
-          relay.legs[i].splits = splits.slice(start, end);
-        }
+      for (let i = 0; i < legCount; i++) {
+        const start = i * perLeg;
+        const end = Math.min(start + perLeg, sorted.length);
+        relay.legs[i].splits = sorted.slice(start, end);
       }
 
       delete (relay as any).splits;
