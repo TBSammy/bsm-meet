@@ -60,16 +60,16 @@ export default async function ResultsPage() {
       .sort((a: any, b: any) => (a.leg_number || 0) - (b.leg_number || 0))
     const legs = sortedLegs.map((leg: any, idx: number) => {
         const swimmer = leg.member_id ? swimmerMap.get(leg.member_id) : null
-        // Renumber relay leg split markers to be per-leg (1-based)
+        // Keep original cumulative markers (relay positions like 175m, 200m)
         const raw = relayLegSplitsMap[leg.id] || []
-        const sorted = [...raw].sort((a: any, b: any) => a.marker - b.marker)
-        const renumbered = sorted.map((s: any, i: number) => ({ ...s, marker: i + 1 }))
+        const legSplits = [...raw].sort((a: any, b: any) => a.marker - b.marker)
         // For the last leg, add the relay finish time as the final split
         // (HY3 files often omit the final G1 record — the finish is the result_time)
-        if (idx === sortedLegs.length - 1 && r.result_time && renumbered.length > 0) {
-          const lastTime = renumbered[renumbered.length - 1].time
+        if (idx === sortedLegs.length - 1 && r.result_time && legSplits.length > 0) {
+          const lastTime = legSplits[legSplits.length - 1].time
           if (lastTime !== r.result_time) {
-            renumbered.push({ marker: renumbered.length + 1, time: r.result_time })
+            const lastMarker = legSplits[legSplits.length - 1].marker
+            legSplits.push({ marker: lastMarker + 1, time: r.result_time })
           }
         }
         return {
@@ -79,7 +79,7 @@ export default async function ResultsPage() {
           given_name: leg.given_name || swimmer?.given_name || null,
           surname: leg.surname || swimmer?.surname || null,
           age_group: leg.age_group || swimmer?.age_group || null,
-          splits: renumbered,
+          splits: legSplits,
         }
       })
 
