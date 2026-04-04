@@ -66,7 +66,7 @@ h1, h2, h3, h4, h5, h6 {
   100% { background-position: 200% center; }
 }
 .animate-shimmer-gold {
-  background: linear-gradient(90deg, #eab308 0%, #fbbf24 25%, #f59e0b 50%, #fbbf24 75%, #eab308 100%);
+  background: linear-gradient(90deg, #eab308 0%, #fbbf24 20%, #fef3c7 50%, #fbbf24 80%, #eab308 100%);
   background-size: 200% 100%;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
