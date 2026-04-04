@@ -367,7 +367,7 @@ export function ResultsClient({ events, meetCourse }: { events: [number, { name:
                             >
                               <td className="text-center px-2 py-2 font-bold">
                                 {!isDqNs && !isEXH && r.result_place ? (
-                                  <span className={`${(PLACE_COLOR as any)[r.result_place] ?? PLACE_COLOR.default} ${placeNum <= 3 ? 'font-bold' : 'font-normal'}`}>
+                                  <span className={`${placeNum === 1 ? 'animate-shimmer-gold font-bold' : `${(PLACE_COLOR as any)[r.result_place] ?? PLACE_COLOR.default} ${placeNum <= 3 ? 'font-bold' : 'font-normal'}`}`}>
                                     {ordinal(r.result_place)}
                                   </span>
                                 ) : ''}

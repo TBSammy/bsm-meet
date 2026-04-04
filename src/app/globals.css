@@ -60,6 +60,20 @@ h1, h2, h3, h4, h5, h6 {
   animation: subtle-glow 4s ease-in-out infinite;
 }
 
+/* Gold shimmer for 1st place */
+@keyframes shimmer-gold {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+.animate-shimmer-gold {
+  background: linear-gradient(90deg, #eab308 0%, #fbbf24 25%, #f59e0b 50%, #fbbf24 75%, #eab308 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer-gold 3s linear infinite;
+}
+
 /* Shimmer text effect for footer branding */
 @keyframes shimmer-bsm {
   0% { background-position: -200% center; }
