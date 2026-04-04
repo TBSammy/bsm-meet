@@ -4,16 +4,15 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { Menu, X } from 'lucide-react'
 
-const navItems = [
-  { href: '/', label: 'Home' },
-  { href: '/program', label: 'Program' },
-  { href: '/entries', label: 'Entry List' },
-  { href: '/results', label: 'Results' },
-  { href: '/venue', label: 'Venue' },
-  { href: '/portal', label: 'Swimmer Portal' },
-]
-
-export function Header() {
+export function Header({ entriesClosed, resultsLive }: { entriesClosed?: boolean; resultsLive?: boolean }) {
+  const navItems = [
+    { href: '/', label: 'Home' },
+    { href: '/program', label: 'Program' },
+    ...(entriesClosed ? [{ href: '/entries', label: 'Entry List' }] : []),
+    ...(resultsLive ? [{ href: '/results', label: 'Results' }] : []),
+    { href: '/venue', label: 'Venue' },
+    { href: '/portal', label: 'Swimmer Portal' },
+  ]
   const [mobileOpen, setMobileOpen] = useState(false)
 
   return (

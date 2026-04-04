@@ -34,6 +34,18 @@ export default async function EntriesPage() {
   const totalSwimmers = new Set(entries.filter(e => e.swimmer).map(e => e.swimmer.id)).size
   const totalClubs = clubList.length
 
+  if (!campaign?.entries_closed) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <h1 className="font-display font-bold text-3xl text-dark-900 mb-2">Entry List</h1>
+        <div className="text-center py-20 bg-navy-50/50 rounded-2xl">
+          <h2 className="font-display font-bold text-xl text-navy-700 mb-2">Entry List Not Yet Available</h2>
+          <p className="text-navy-500">The entry list will be published once entries close. Check back soon!</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <h1 className="font-display font-bold text-3xl text-dark-900 mb-2">Entry List</h1>

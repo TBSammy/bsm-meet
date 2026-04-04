@@ -190,7 +190,7 @@ function RelayLegsExpansion({ legs, eventNum, eventName, onShowSplits }: {
   )
 }
 
-export function ResultsClient({ events, meetCourse }: { events: [number, { name: string, eventGender: string, results: any[] }][], meetCourse: string }) {
+export function ResultsClient({ events, meetCourse, pointsVisible }: { events: [number, { name: string, eventGender: string, results: any[] }][], meetCourse: string, pointsVisible?: boolean }) {
   const courseLen = getCourseLength(meetCourse)
   const [filter, setFilter] = useState<'all' | 'individual' | 'relay'>('all')
   const [search, setSearch] = useState('')
@@ -342,6 +342,7 @@ export function ResultsClient({ events, meetCourse }: { events: [number, { name:
                           <th className="text-left px-2 py-1.5">Name</th>
                           <th className="text-left px-2 py-1.5 w-16">Club</th>
                           <th className="text-right px-2 py-1.5 w-20">Time</th>
+                          {pointsVisible && <th className="text-right px-2 py-1.5 w-12">Pts</th>}
                         </tr>
                       </thead>
                       {group.results.map((r: any) => {
@@ -414,10 +415,15 @@ export function ResultsClient({ events, meetCourse }: { events: [number, { name:
                                   </>
                                 )}
                               </td>
+                              {pointsVisible && (
+                                <td className="text-right px-2 py-2 font-mono text-xs text-navy-600">
+                                  {!isDqNs && !isRelay && r.result_points ? r.result_points : ''}
+                                </td>
+                              )}
                             </tr>
                             {isRowExpanded && !isRelay && (
                               <tr>
-                                <td colSpan={5} className="px-4 py-2 bg-navy-50/20 border-b border-navy-100">
+                                <td colSpan={pointsVisible ? 6 : 5} className="px-4 py-2 bg-navy-50/20 border-b border-navy-100">
                                   <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 text-xs">
                                     <div>
                                       <span className="text-navy-400">Heat</span>
@@ -452,7 +458,7 @@ export function ResultsClient({ events, meetCourse }: { events: [number, { name:
                             )}
                             {isRelayExpanded && hasLegs && (
                               <tr>
-                                <td colSpan={5} className="p-0">
+                                <td colSpan={pointsVisible ? 6 : 5} className="p-0">
                                   <RelayLegsExpansion
                                     legs={r.legs} eventNum={eventNum} eventName={ev.name}
                                     onShowSplits={(name, event, splits) => {

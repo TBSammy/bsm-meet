@@ -3,13 +3,16 @@ import './globals.css'
 import { Header } from '@/components/Header'
 import { Footer } from '@/components/Footer'
 import { AnnouncerProvider } from '@/components/AnnouncerContext'
+import { getCampaign } from '@/lib/supabase/queries'
 
 export const metadata: Metadata = {
   title: 'Brisbane Southside Masters SC Meet 2025',
   description: 'Brisbane Southside Masters Short Course Meet — Sleeman Sports Complex, Chandler',
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const campaign = await getCampaign()
+
   return (
     <html lang="en">
       <head>
@@ -19,7 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-screen flex flex-col bg-white">
         <AnnouncerProvider>
-          <Header />
+          <Header entriesClosed={campaign?.entries_closed ?? false} resultsLive={campaign?.results_live ?? false} />
           <main className="flex-1">{children}</main>
           <Footer />
         </AnnouncerProvider>

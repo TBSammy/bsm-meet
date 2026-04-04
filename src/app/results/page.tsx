@@ -121,6 +121,19 @@ export default async function ResultsPage() {
 
   const sortedEvents = [...eventMap.entries()].sort(([a], [b]) => a - b)
 
+  if (!campaign?.results_live) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <h1 className="font-display font-bold text-3xl text-navy-900 mb-2">Results</h1>
+        <div className="text-center py-20 bg-navy-50/50 rounded-2xl">
+          <h2 className="font-display font-bold text-xl text-navy-700 mb-2">Results Not Yet Available</h2>
+          <p className="text-navy-500">Results will be published once the meet begins. Check back during the event!</p>
+          <p className="text-navy-400 text-sm mt-2">This page auto-refreshes every 30 seconds</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <h1 className="font-display font-bold text-3xl text-navy-900 mb-2">Results</h1>
@@ -138,7 +151,7 @@ export default async function ResultsPage() {
           <p className="text-navy-400 text-sm mt-2">This page auto-refreshes every 30 seconds</p>
         </div>
       ) : (
-        <ResultsClient events={sortedEvents} meetCourse={campaign?.meet_course || 'S'} />
+        <ResultsClient events={sortedEvents} meetCourse={campaign?.meet_course || 'S'} pointsVisible={campaign?.points_visible ?? false} />
       )}
     </div>
   )
