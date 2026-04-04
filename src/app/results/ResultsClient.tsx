@@ -367,8 +367,8 @@ export function ResultsClient({ events, meetCourse }: { events: [number, { name:
                             >
                               <td className="text-center px-2 py-2 font-bold">
                                 {!isDqNs && !isEXH && r.result_place ? (
-                                  <span className={`${placeNum === 1 ? 'animate-shimmer-gold font-bold' : `${(PLACE_COLOR as any)[r.result_place] ?? PLACE_COLOR.default} ${placeNum <= 3 ? 'font-bold' : 'font-normal'}`}`}>
-                                    {ordinal(r.result_place)}
+                                  <span className={`${placeNum === 1 ? 'animate-shimmer-gold font-bold' : `${(PLACE_COLOR as any)[placeNum] ?? PLACE_COLOR.default} ${placeNum <= 3 ? 'font-bold' : 'font-normal'}`}`}>
+                                    {ordinal(placeNum)}
                                   </span>
                                 ) : ''}
                               </td>
@@ -405,12 +405,12 @@ export function ResultsClient({ events, meetCourse }: { events: [number, { name:
                                     >
                                       {formatTime(r.result_time)}
                                     </button>
-                                    {isEXH && <span className={`${BADGE.EXH} ml-1`}>EXH</span>}
+                                    {isEXH && <span className={`${BADGE.EXH} ml-1.5`}>EXH</span>}
                                   </>
                                 ) : (
                                   <>
                                     <span className="font-semibold text-navy-900">{formatTime(r.result_time)}</span>
-                                    {isEXH && <span className={`${BADGE.EXH} ml-1`}>EXH</span>}
+                                    {isEXH && <span className={`${BADGE.EXH} ml-1.5`}>EXH</span>}
                                   </>
                                 )}
                               </td>
