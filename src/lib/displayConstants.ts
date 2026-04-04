@@ -13,7 +13,7 @@ export const NT_TIME_COLOR = 'text-orange-400';
 
 export const PLACE_COLOR: Record<number | 'default', string> = {
   1: 'text-yellow-500',
-  2: 'text-gray-400',
+  2: 'text-[#8E9196]',    // silver
   3: 'text-amber-600',
   default: 'text-gray-700',
 };
