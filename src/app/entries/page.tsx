@@ -1,10 +1,11 @@
-import { getEntries } from '@/lib/supabase/queries'
+import { getEntries, getCampaign } from '@/lib/supabase/queries'
 import { EntryListClient } from './EntryListClient'
 
 export const revalidate = 60
 
 export default async function EntriesPage() {
-  const entries = await getEntries()
+  const [entries, campaign] = await Promise.all([getEntries(), getCampaign()])
+  const showHeatLane = campaign?.heat_lane_visible ?? false
 
   // Group by club then swimmer (use swimmer.id as key to avoid name collisions)
   const clubMap = new Map<string, { club: string, code: string, swimmers: Map<string, any> }>()
@@ -37,7 +38,7 @@ export default async function EntriesPage() {
     <div className="max-w-7xl mx-auto px-4 py-8">
       <h1 className="font-display font-bold text-3xl text-dark-900 mb-2">Entry List</h1>
       <p className="text-dark-500 mb-8">{totalSwimmers} swimmers &bull; {entries.length} entries &bull; {totalClubs} clubs</p>
-      <EntryListClient clubs={clubList} />
+      <EntryListClient clubs={clubList} showHeatLane={showHeatLane} />
     </div>
   )
 }

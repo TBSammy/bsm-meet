@@ -6,7 +6,7 @@ import { formatSeedTime } from '@/lib/utils'
 import { eventName } from '@/lib/eventCodes'
 import { NT_TIME_COLOR } from '@/lib/displayConstants'
 
-export function EntryListClient({ clubs }: { clubs: any[] }) {
+export function EntryListClient({ clubs, showHeatLane = false }: { clubs: any[]; showHeatLane?: boolean }) {
   const [search, setSearch] = useState('')
   const [expandedClubs, setExpandedClubs] = useState<Set<string>>(new Set())
 
@@ -109,6 +109,9 @@ export function EntryListClient({ clubs }: { clubs: any[] }) {
                             <span className="flex-1 truncate text-gray-700">
                               {displayName}
                             </span>
+                            {showHeatLane && e.result_heat && e.result_lane && (
+                              <span className="text-xs text-gray-400 font-mono shrink-0">H{e.result_heat}L{e.result_lane}</span>
+                            )}
                             {!isOut && (
                               <span className={`font-mono text-xs text-right shrink-0 w-14 ${isNT ? NT_TIME_COLOR : 'text-gray-600'}`}>
                                 {formatSeedTime(e.original_time)}
