@@ -109,7 +109,7 @@ export function EntryListClient({ clubs, showHeatLane = false }: { clubs: any[];
                             <span className="flex-1 truncate text-gray-700">
                               {displayName}
                             </span>
-                            {showHeatLane && e.result_heat && e.result_lane && (
+                            {showHeatLane && e.result_heat && e.result_lane && e.result_heat !== '0' && e.result_lane !== '0' && (
                               <span className="text-xs text-gray-400 font-mono shrink-0">H{e.result_heat}L{e.result_lane}</span>
                             )}
                             {!isOut && (
