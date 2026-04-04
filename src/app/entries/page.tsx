@@ -34,7 +34,7 @@ export default async function EntriesPage() {
   const totalSwimmers = new Set(entries.filter(e => e.swimmer).map(e => e.swimmer.id)).size
   const totalClubs = clubList.length
 
-  if (!campaign?.entries_closed) {
+  if (campaign && !campaign.entries_closed) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-8">
         <h1 className="font-display font-bold text-3xl text-dark-900 mb-2">Entry List</h1>

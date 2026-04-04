@@ -121,7 +121,7 @@ export default async function ResultsPage() {
 
   const sortedEvents = [...eventMap.entries()].sort(([a], [b]) => a - b)
 
-  if (!campaign?.results_live) {
+  if (campaign && !campaign.results_live) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-8">
         <h1 className="font-display font-bold text-3xl text-navy-900 mb-2">Results</h1>

@@ -10,6 +10,8 @@ export const metadata: Metadata = {
   description: 'Brisbane Southside Masters Short Course Meet — Sleeman Sports Complex, Chandler',
 }
 
+export const revalidate = 60
+
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const campaign = await getCampaign()
 
@@ -22,7 +24,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body className="min-h-screen flex flex-col bg-white">
         <AnnouncerProvider>
-          <Header entriesClosed={campaign?.entries_closed ?? false} resultsLive={campaign?.results_live ?? false} />
+          <Header entriesClosed={campaign ? !!campaign.entries_closed : true} resultsLive={campaign ? !!campaign.results_live : true} />
           <main className="flex-1">{children}</main>
           <Footer />
         </AnnouncerProvider>
