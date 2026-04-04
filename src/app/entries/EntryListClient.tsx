@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Search, ChevronDown, ChevronRight } from 'lucide-react'
 import { formatSeedTime } from '@/lib/utils'
 import { eventName } from '@/lib/eventCodes'
-import { BADGE, NT_TIME_COLOR, BADGE_LEGEND } from '@/lib/displayConstants'
+import { NT_TIME_COLOR } from '@/lib/displayConstants'
 
 export function EntryListClient({ clubs }: { clubs: any[] }) {
   const [search, setSearch] = useState('')
@@ -51,16 +51,6 @@ export function EntryListClient({ clubs }: { clubs: any[] }) {
           </button>
         </div>
       </div>
-
-      {/* Legend */}
-      <details className="mb-4 text-sm">
-        <summary className="cursor-pointer text-dark-500 hover:text-dark-700">Legend</summary>
-        <div className="mt-1 flex flex-wrap gap-3 text-xs text-dark-600">
-          <span><span className={BADGE.EXH}>EXH</span> {BADGE_LEGEND.EXH}</span>
-          <span><span className={BADGE.IN}>IN</span> {BADGE_LEGEND.IN}</span>
-          <span><span className="line-through text-gray-400">Scratched</span> {BADGE_LEGEND.SCR}</span>
-        </div>
-      </details>
 
       {/* Results counter */}
       <p className="text-sm text-gray-600 mb-4">
@@ -119,12 +109,6 @@ export function EntryListClient({ clubs }: { clubs: any[] }) {
                             <span className="flex-1 truncate text-gray-700">
                               {displayName}
                             </span>
-                            {e.result_exh && !e.scratched && (
-                              <span className={`${BADGE.EXH} shrink-0`}>EXH</span>
-                            )}
-                            {e.checked_in && !e.scratched && (
-                              <span className={`${BADGE.IN} shrink-0`}>IN</span>
-                            )}
                             {!isOut && (
                               <span className={`font-mono text-xs text-right shrink-0 w-14 ${isNT ? NT_TIME_COLOR : 'text-gray-600'}`}>
                                 {formatSeedTime(e.original_time)}

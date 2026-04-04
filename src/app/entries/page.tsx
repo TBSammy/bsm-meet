@@ -24,7 +24,7 @@ export default async function EntriesPage() {
   }
 
   const clubList = [...clubMap.values()]
-    .sort((a, b) => b.swimmers.size - a.swimmers.size)
+    .sort((a, b) => a.club.localeCompare(b.club))
     .map(c => ({
       ...c,
       swimmers: [...c.swimmers.values()].sort((a, b) => a.surname.localeCompare(b.surname)),
