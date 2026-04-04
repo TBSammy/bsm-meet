@@ -131,6 +131,12 @@ export default function MyEventsPage() {
                   <div className="text-right">
                     <p className="font-mono font-bold text-bsm-700">{formatSeedTime(e.result_time)}</p>
                     {e.result_place && <p className="text-xs text-dark-400">Place: {e.result_place}</p>}
+                    {e.original_time && !e.was_nt && (() => {
+                      const delta = e.result_time - e.original_time
+                      const sign = delta < 0 ? '-' : '+'
+                      const color = delta < 0 ? 'text-green-600' : delta > 0 ? 'text-red-500' : 'text-dark-400'
+                      return <p className={`text-xs font-mono ${color}`}>{sign}{formatSeedTime(Math.abs(delta))}</p>
+                    })()}
                   </div>
                 ) : e.result_dq === 'Q' ? (
                   <div className="text-right">
