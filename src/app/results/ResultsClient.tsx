@@ -356,7 +356,7 @@ export function ResultsClient({ events, meetCourse }: { events: [number, { name:
                         const isEXH = !!r.result_exh
                         const rowKey = `${eventNum}-${r.id}`
                         const isRowExpanded = expandedRows.has(rowKey)
-                        const placeNum = r.result_place || 0
+                        const placeNum = Number(r.result_place) || 0
                         const rowTint = placeNum === 1 ? 'bg-yellow-50/30' : placeNum === 2 ? 'bg-gray-50/30' : placeNum === 3 ? 'bg-amber-50/20' : ''
 
                         return (
