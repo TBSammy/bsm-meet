@@ -3,13 +3,8 @@
 import { useState } from 'react'
 import { formatTime } from '@/lib/utils'
 import { courseLength as getCourseLength } from '@/lib/eventCodes'
+import { BADGE, PLACE_COLOR, NT_TIME_COLOR, ordinal } from '@/lib/displayConstants'
 import { Filter, X, Search, ChevronDown, ChevronRight, ChevronsUpDown, Users } from 'lucide-react'
-
-function ordinal(n: number): string {
-  const s = ['th', 'st', 'nd', 'rd']
-  const v = n % 100
-  return n + (s[(v - 20) % 10] || s[v] || s[0])
-}
 
 /** Determine swim status from result fields — mirrors MC getSwimStatus() */
 function getSwimStatus(r: any): 'DQ' | 'NS' | number | null {
@@ -20,15 +15,17 @@ function getSwimStatus(r: any): 'DQ' | 'NS' | number | null {
   return null
 }
 
-function StatusBadge({ status }: { status: 'DQ' | 'NS' }) {
-  const styles = status === 'DQ'
-    ? 'bg-red-100 text-red-700 border-red-200'
-    : 'bg-gray-100 text-gray-600 border-gray-200'
-  return (
-    <span className={`inline-block px-1.5 py-0.5 rounded text-xs font-semibold border ${styles}`}>
-      {status}
-    </span>
-  )
+function StatusBadge({ status }: { status: 'DQ' | 'NS' | 'EXH' }) {
+  const cls = status === 'DQ' ? BADGE.DQ : status === 'NS' ? BADGE.NS : BADGE.EXH
+  return <span className={cls}>{status}</span>
+}
+
+function TimeDelta({ seed, result, wasNt }: { seed: number | null, result: number | null, wasNt: boolean }) {
+  if (wasNt || !seed || !result) return <span className="text-navy-400">{'\u2014'}</span>
+  const delta = result - seed
+  const sign = delta < 0 ? '-' : '+'
+  const color = delta < 0 ? 'text-green-600' : delta > 0 ? 'text-red-500' : 'text-navy-400'
+  return <span className={`font-mono ${color}`}>{sign}{formatTime(Math.abs(delta))}</span>
 }
 
 function SplitModal({ name, event, courseLen, splits, resultTime, onClose }: { name: string, event: string, courseLen: number, splits: any[], resultTime?: number | null, onClose: () => void }) {
@@ -200,6 +197,7 @@ export function ResultsClient({ events, meetCourse }: { events: [number, { name:
   const [showSplits, setShowSplits] = useState<{ name: string, event: string, splits: any[], resultTime?: number | null } | null>(null)
   const [collapsedEvents, setCollapsedEvents] = useState<Set<number>>(new Set())
   const [expandedRelays, setExpandedRelays] = useState<Set<string>>(new Set())
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
 
   const q = search.toLowerCase().trim()
 
@@ -236,6 +234,14 @@ export function ResultsClient({ events, meetCourse }: { events: [number, { name:
       const next = new Set(prev)
       if (next.has(relayKey)) next.delete(relayKey)
       else next.add(relayKey)
+      return next
+    })
+  }
+
+  const toggleRow = (key: string) => {
+    setExpandedRows(prev => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key); else next.add(key)
       return next
     })
   }
@@ -338,29 +344,33 @@ export function ResultsClient({ events, meetCourse }: { events: [number, { name:
                           <th className="text-right px-2 py-1.5 w-20">Time</th>
                         </tr>
                       </thead>
-                      {group.results.map((r: any, i: number) => {
+                      {group.results.map((r: any) => {
                         const hasSplits = r.splits && r.splits.length > 0
-                        const isTop3 = r.result_place && r.result_place <= 3
                         const swimmerName = r.swimmer ? `${r.swimmer.given_name} ${r.swimmer.surname}`.trim() : '—'
                         const status = getSwimStatus(r)
                         const isDqNs = status === 'DQ' || status === 'NS'
                         const isRelay = r.isRelay
                         const hasLegs = isRelay && r.legs && r.legs.length > 0
-                        const relayKey = `${eventNum}-${i}`
+                        const relayKey = `${eventNum}-${r.id}`
                         const isRelayExpanded = expandedRelays.has(relayKey)
+                        const isEXH = !!r.result_exh
+                        const rowKey = `${eventNum}-${r.id}`
+                        const isRowExpanded = expandedRows.has(rowKey)
+                        const placeNum = r.result_place || 0
+                        const rowTint = placeNum === 1 ? 'bg-yellow-50/30' : placeNum === 2 ? 'bg-gray-50/30' : placeNum === 3 ? 'bg-amber-50/20' : ''
 
                         return (
-                          <tbody key={i}>
+                          <tbody key={r.id}>
                             <tr
-                              className={`border-b border-navy-50 text-sm ${isDqNs ? 'opacity-60' : isTop3 ? 'bg-cyan-50/30' : ''} ${hasLegs ? 'cursor-pointer hover:bg-navy-50/50' : ''}`}
-                              onClick={hasLegs ? () => toggleRelay(relayKey) : undefined}
+                              className={`border-b border-navy-50 text-sm ${isDqNs ? 'opacity-60' : rowTint} ${hasLegs ? 'cursor-pointer hover:bg-navy-50/50' : !isRelay ? 'cursor-pointer hover:bg-navy-50/30' : ''}`}
+                              onClick={hasLegs ? () => toggleRelay(relayKey) : !isRelay ? () => toggleRow(rowKey) : undefined}
                             >
-                              <td className="text-center px-2 py-2 font-bold text-navy-400">
-                                {isDqNs ? (
-                                  <StatusBadge status={status as 'DQ' | 'NS'} />
-                                ) : r.result_place ? (
-                                  <span className={isTop3 ? 'text-cyan-700' : ''}>{ordinal(r.result_place)}</span>
-                                ) : '—'}
+                              <td className="text-center px-2 py-2 font-bold">
+                                {!isDqNs && !isEXH && r.result_place ? (
+                                  <span className={`${(PLACE_COLOR as any)[r.result_place] ?? PLACE_COLOR.default} ${placeNum <= 3 ? 'font-bold' : 'font-normal'}`}>
+                                    {ordinal(r.result_place)}
+                                  </span>
+                                ) : ''}
                               </td>
                               <td className="text-center px-2 py-2 font-mono text-xs text-navy-400 hidden sm:table-cell">
                                 {r.result_lane || '—'}
@@ -385,20 +395,61 @@ export function ResultsClient({ events, meetCourse }: { events: [number, { name:
                                 {isDqNs ? (
                                   <StatusBadge status={status as 'DQ' | 'NS'} />
                                 ) : hasSplits ? (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      setShowSplits({ name: swimmerName, event: `Event ${eventNum} — ${ev.name}`, splits: r.splits, resultTime: r.result_time })
-                                    }}
-                                    className="text-blue-600 underline decoration-dotted cursor-pointer font-semibold hover:text-blue-800"
-                                  >
-                                    {formatTime(r.result_time)}
-                                  </button>
+                                  <>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        setShowSplits({ name: swimmerName, event: `Event ${eventNum} \u2014 ${ev.name}`, splits: r.splits, resultTime: r.result_time })
+                                      }}
+                                      className="text-blue-600 underline decoration-dotted cursor-pointer font-semibold hover:text-blue-800"
+                                    >
+                                      {formatTime(r.result_time)}
+                                    </button>
+                                    {isEXH && <span className={`${BADGE.EXH} ml-1`}>EXH</span>}
+                                  </>
                                 ) : (
-                                  <span className="font-semibold text-navy-900">{formatTime(r.result_time)}</span>
+                                  <>
+                                    <span className="font-semibold text-navy-900">{formatTime(r.result_time)}</span>
+                                    {isEXH && <span className={`${BADGE.EXH} ml-1`}>EXH</span>}
+                                  </>
                                 )}
                               </td>
                             </tr>
+                            {isRowExpanded && !isRelay && (
+                              <tr>
+                                <td colSpan={5} className="px-4 py-2 bg-navy-50/20 border-b border-navy-100">
+                                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 text-xs">
+                                    <div>
+                                      <span className="text-navy-400">Heat</span>
+                                      <div className="font-mono mt-0.5">{r.result_heat || '\u2014'}</div>
+                                    </div>
+                                    <div>
+                                      <span className="text-navy-400">Lane</span>
+                                      <div className="font-mono mt-0.5">{r.result_lane || '\u2014'}</div>
+                                    </div>
+                                    <div>
+                                      <span className="text-navy-400">Seed</span>
+                                      <div className="font-mono mt-0.5">
+                                        {r.was_nt
+                                          ? <span className={NT_TIME_COLOR}>NT</span>
+                                          : r.original_time ? formatTime(r.original_time) : '\u2014'
+                                        }
+                                      </div>
+                                    </div>
+                                    <div>
+                                      <span className="text-navy-400">Change</span>
+                                      <div className="mt-0.5">
+                                        <TimeDelta seed={r.original_time} result={r.result_time} wasNt={r.was_nt} />
+                                      </div>
+                                    </div>
+                                    <div>
+                                      <span className="text-navy-400">Age</span>
+                                      <div className="mt-0.5">{r.swimmer?.age_group || '\u2014'}</div>
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
                             {isRelayExpanded && hasLegs && (
                               <tr>
                                 <td colSpan={5} className="p-0">
