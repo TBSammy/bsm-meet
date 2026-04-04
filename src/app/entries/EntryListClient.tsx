@@ -1,15 +1,14 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { Search, ChevronDown, ChevronRight } from 'lucide-react'
-import { formatSeedTime, formatTime } from '@/lib/utils'
+import { formatSeedTime } from '@/lib/utils'
 import { eventName } from '@/lib/eventCodes'
+import { BADGE, NT_TIME_COLOR, BADGE_LEGEND } from '@/lib/displayConstants'
 
-export function EntryListClient({ clubs, eventsWithResults }: { clubs: any[], eventsWithResults: string[] }) {
+export function EntryListClient({ clubs }: { clubs: any[] }) {
   const [search, setSearch] = useState('')
   const [expandedClubs, setExpandedClubs] = useState<Set<string>>(new Set())
-
-  const ewrSet = useMemo(() => new Set(eventsWithResults), [eventsWithResults])
 
   const filtered = search
     ? clubs.map(c => ({
@@ -26,7 +25,7 @@ export function EntryListClient({ clubs, eventsWithResults }: { clubs: any[], ev
     setExpandedClubs(next)
   }
 
-  const expandAll = () => setExpandedClubs(new Set(filtered.map(c => c.club)))
+  const expandAll = () => setExpandedClubs(new Set(clubs.map((c: any) => c.club)))
   const collapseAll = () => setExpandedClubs(new Set())
 
   return (
@@ -53,15 +52,25 @@ export function EntryListClient({ clubs, eventsWithResults }: { clubs: any[], ev
         </div>
       </div>
 
+      {/* Legend */}
+      <details className="mb-4 text-sm">
+        <summary className="cursor-pointer text-dark-500 hover:text-dark-700">Legend</summary>
+        <div className="mt-1 flex flex-wrap gap-3 text-xs text-dark-600">
+          <span><span className={BADGE.EXH}>EXH</span> {BADGE_LEGEND.EXH}</span>
+          <span><span className={BADGE.IN}>IN</span> {BADGE_LEGEND.IN}</span>
+          <span><span className="line-through text-gray-400">Scratched</span> {BADGE_LEGEND.SCR}</span>
+        </div>
+      </details>
+
       {/* Results counter */}
       <p className="text-sm text-gray-600 mb-4">
         Showing <span className="font-semibold">{filtered.length}</span> clubs with{' '}
-        <span className="font-semibold">{filtered.reduce((n, c) => n + c.swimmers.length, 0)}</span> swimmers
+        <span className="font-semibold">{filtered.reduce((n: number, c: any) => n + c.swimmers.length, 0)}</span> swimmers
       </p>
 
       {/* Club groups */}
       <div className="space-y-8">
-        {filtered.map((club) => (
+        {filtered.map((club: any) => (
           <div key={club.club}>
             {/* Club header — code first, then name */}
             <button
@@ -98,48 +107,28 @@ export function EntryListClient({ clubs, eventsWithResults }: { clubs: any[], ev
                       </span>
                     </div>
 
-                    {/* Event items — 2-column grid */}
+                    {/* Event items — 2-column grid, sorted by event number */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 mt-1 pl-4">
-                      {swimmer.entries.map((e: any, i: number) => {
-                        const isNT = !e.original_time
+                      {[...swimmer.entries].sort((a: any, b: any) => (a.event_number || 0) - (b.event_number || 0)).map((e: any, i: number) => {
+                        const isNT = !e.original_time || e.original_time === 'NT'
                         const displayName = eventName(e.event_code)
-                        const placeNum = e.result_place ? parseInt(e.result_place) : null
-                        const placeColor = placeNum === 1 ? 'text-yellow-500' : placeNum === 2 ? 'text-gray-400' : placeNum === 3 ? 'text-amber-600' : placeNum ? 'text-gray-700' : ''
-                        // Status: SCR > DQ > NS > normal
-                        const isNS = !e.scratched && (e.result_dq === 'R' || (e.result_time === null && !e.result_dq && ewrSet.has(e.event_code)))
-                        const isDQ = !e.scratched && e.result_dq === 'Q'
-                        const isOut = e.scratched || isNS
+                        const isOut = e.scratched
                         return (
                           <div key={i} className={`flex items-center gap-1.5 py-0.5 text-sm ${isOut ? 'opacity-50 line-through text-gray-400' : ''}`}>
                             <span className="text-xs font-mono text-gray-400 w-6 shrink-0">{e.event_number}</span>
                             <span className="flex-1 truncate text-gray-700">
                               {displayName}
                             </span>
-                            {e.scratched && (
-                              <span className="text-xs px-1 py-0.5 bg-orange-100 text-orange-700 rounded no-underline shrink-0">SCR</span>
+                            {e.result_exh && !e.scratched && (
+                              <span className={`${BADGE.EXH} shrink-0`}>EXH</span>
                             )}
-                            {isDQ && (
-                              <span className="text-xs px-1 py-0.5 bg-red-100 text-red-700 rounded no-underline shrink-0">DQ</span>
-                            )}
-                            {isNS && (
-                              <span className="text-xs px-1 py-0.5 bg-gray-100 text-gray-600 rounded no-underline shrink-0">NS</span>
+                            {e.checked_in && !e.scratched && (
+                              <span className={`${BADGE.IN} shrink-0`}>IN</span>
                             )}
                             {!isOut && (
-                              <>
-                                {e.result_heat && e.result_lane && (
-                                  <span className="text-xs text-gray-400 font-mono shrink-0">
-                                    H{e.result_heat}L{e.result_lane}
-                                  </span>
-                                )}
-                                <span className={`font-mono text-xs text-right shrink-0 w-14 ${isNT ? 'text-red-500 font-semibold' : 'text-gray-600'}`}>
-                                  {e.result_time ? formatTime(e.result_time) : formatSeedTime(e.original_time)}
-                                </span>
-                                {placeNum && (
-                                  <span className={`text-xs font-semibold w-6 text-right shrink-0 ${placeColor}`}>
-                                    {placeNum}
-                                  </span>
-                                )}
-                              </>
+                              <span className={`font-mono text-xs text-right shrink-0 w-14 ${isNT ? NT_TIME_COLOR : 'text-gray-600'}`}>
+                                {formatSeedTime(e.original_time)}
+                              </span>
                             )}
                           </div>
                         )

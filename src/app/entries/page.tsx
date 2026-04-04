@@ -33,14 +33,11 @@ export default async function EntriesPage() {
   const totalSwimmers = new Set(entries.filter(e => e.swimmer).map(e => e.swimmer.id)).size
   const totalClubs = clubList.length
 
-  // Events where at least one swimmer has a result — used to detect NS
-  const eventsWithResults = [...new Set(entries.filter(e => e.result_time !== null).map(e => e.event_code))]
-
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <h1 className="font-display font-bold text-3xl text-dark-900 mb-2">Entry List</h1>
       <p className="text-dark-500 mb-8">{totalSwimmers} swimmers &bull; {entries.length} entries &bull; {totalClubs} clubs</p>
-      <EntryListClient clubs={clubList} eventsWithResults={eventsWithResults} />
+      <EntryListClient clubs={clubList} />
     </div>
   )
 }
