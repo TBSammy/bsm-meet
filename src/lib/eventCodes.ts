@@ -19,7 +19,7 @@ export function eventName(hy3Code: string): string {
   const letter = trimmed.slice(-1)
   const distance = trimmed.slice(0, -1)
   const stroke = STROKE_MAP[letter]
-  if (stroke && distance) return `${distance} ${stroke}`
+  if (stroke && distance) return `${distance}m ${stroke}`
   return hy3Code
 }
 
@@ -40,6 +40,6 @@ export function relayEventName(hy3Code: string): string {
   const letter = trimmed.slice(-1)
   const totalDistance = parseInt(trimmed.slice(0, -1))
   const stroke = RELAY_STROKE_MAP[letter]
-  if (stroke && totalDistance) return `4x${totalDistance / 4} ${stroke} Relay`
+  if (stroke && totalDistance) return `4x${totalDistance / 4}m ${stroke} Relay`
   return hy3Code
 }
