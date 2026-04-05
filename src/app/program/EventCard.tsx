@@ -24,7 +24,7 @@ export function EventCard({ eventNum, displayName, genderLabel, estTime, schedul
           Event {eventNum}
         </span>
         <span className="font-semibold text-sm text-gray-700 truncate">
-          {displayName}{genderLabel ? ` — ${genderLabel}` : ''}
+          {genderLabel === 'Women' ? "Women's " : genderLabel === 'Men' ? "Men's " : genderLabel ? `${genderLabel} ` : ''}{displayName}
         </span>
         <div className="ml-auto flex items-center gap-3 shrink-0">
           {bioIndicator && (
