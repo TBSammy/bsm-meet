@@ -19,9 +19,42 @@ export default async function EntriesPage() {
     const swimmerKey = s.id
     const clubData = clubMap.get(clubKey)!
     if (!clubData.swimmers.has(swimmerKey)) {
-      clubData.swimmers.set(swimmerKey, { ...s, entries: [] })
+      clubData.swimmers.set(swimmerKey, { ...s, entries: [], relays: [] })
     }
     clubData.swimmers.get(swimmerKey)!.entries.push(e)
+  }
+
+  // Build member_id → swimmer location map for relay matching
+  const memberIdMap = new Map<string, { clubKey: string, swimmerKey: string }>()
+  for (const [clubKey, clubData] of clubMap) {
+    for (const [swimmerKey, swimmer] of clubData.swimmers) {
+      if (swimmer.member_id) {
+        memberIdMap.set(swimmer.member_id, { clubKey, swimmerKey })
+      }
+    }
+  }
+
+  // Attach relay appearances to each swimmer
+  let totalRelayAppearances = 0
+  for (const r of relays) {
+    if (!r.legs) continue
+    for (const leg of r.legs) {
+      if (!leg.member_id) continue
+      const loc = memberIdMap.get(leg.member_id)
+      if (!loc) continue // swimmer not in individual entries — skip for now
+      const swimmer = clubMap.get(loc.clubKey)?.swimmers.get(loc.swimmerKey)
+      if (!swimmer) continue
+      swimmer.relays.push({
+        relayId: r.id,
+        eventCode: r.event_code,
+        eventNumber: r.event_number || '',
+        heat: r.heat || '',
+        lane: r.lane || '',
+        seedTime: r.seed_time,
+        legNumber: leg.leg_number,
+      })
+      totalRelayAppearances++
+    }
   }
 
   const clubList = [...clubMap.values()]
@@ -38,7 +71,7 @@ export default async function EntriesPage() {
   if (campaign && !campaign.entries_closed) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <h1 className="font-display font-bold text-3xl text-dark-900 mb-2">Entry List</h1>
+        <h1 className="font-display font-bold text-3xl text-navy-900 mb-2">Entry List</h1>
         <div className="text-center py-20 bg-navy-50/50 rounded-2xl">
           <h2 className="font-display font-bold text-xl text-navy-700 mb-2">Entry List Not Yet Available</h2>
           <p className="text-navy-500">The entry list will be published once entries close. Check back soon!</p>
@@ -49,12 +82,12 @@ export default async function EntriesPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      <h1 className="font-display font-bold text-3xl text-dark-900 mb-2">Entry List</h1>
-      <p className="text-dark-500 mb-8">
+      <h1 className="font-display font-bold text-3xl text-navy-900 mb-2">Entry List</h1>
+      <p className="text-navy-500 mb-8">
         {totalSwimmers} swimmers &bull; {entries.length} entries &bull; {totalClubs} clubs
         {totalRelayTeams > 0 && <> &bull; {totalRelayTeams} relay teams</>}
       </p>
-      <EntryListClient clubs={clubList} showHeatLane={showHeatLane} relays={relays} />
+      <EntryListClient clubs={clubList} showHeatLane={showHeatLane} />
     </div>
   )
 }
