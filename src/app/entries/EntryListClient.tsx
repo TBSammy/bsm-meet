@@ -119,13 +119,13 @@ export function EntryListClient({ clubs, showHeatLane = false, relays = [] }: {
             onClick={expandAll}
             className="px-3 py-1.5 text-sm rounded border border-gray-200 hover:bg-gray-50"
           >
-            Expand All
+            Expand All Entries
           </button>
           <button
             onClick={collapseAll}
             className="px-3 py-1.5 text-sm rounded border border-gray-200 hover:bg-gray-50"
           >
-            Collapse All
+            Collapse All Entries
           </button>
         </div>
       </div>
