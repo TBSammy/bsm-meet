@@ -1,7 +1,7 @@
 'use client'
 
 import { Fragment, useState } from 'react'
-import { Search, ChevronDown, ChevronRight } from 'lucide-react'
+import { Search, X, ChevronDown, ChevronRight } from 'lucide-react'
 import { formatSeedTime } from '@/lib/utils'
 import { eventName, relayEventName } from '@/lib/eventCodes'
 import { NT_TIME_COLOR } from '@/lib/displayConstants'
@@ -28,6 +28,7 @@ export function EntryListClient({ clubs, showHeatLane = false, relays = [] }: {
   const [search, setSearch] = useState('')
   const [expandedClubs, setExpandedClubs] = useState<Set<string>>(new Set())
   const [expandedRelays, setExpandedRelays] = useState<Set<string>>(new Set())
+  const [eventFilter, setEventFilter] = useState<'individual' | 'both' | 'relay'>('both')
 
   const filtered = search
     ? clubs.map(c => ({
@@ -77,34 +78,65 @@ export function EntryListClient({ clubs, showHeatLane = false, relays = [] }: {
   return (
     <>
       {/* Filter toolbar */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 mb-6">
-        <div className="flex items-center gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search by name or club..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-          <button onClick={expandAll} className="text-xs text-blue-600 hover:text-blue-800 font-medium whitespace-nowrap">
+      <div className="flex flex-wrap items-center gap-3 mb-6">
+        <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden">
+          {(['individual', 'both', 'relay'] as const).map(f => (
+            <button
+              key={f}
+              onClick={() => setEventFilter(f)}
+              className={`px-3 py-1.5 text-sm font-bold ${
+                eventFilter === f
+                  ? 'bg-cyan-600 text-white'
+                  : 'bg-white text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              {f === 'individual' ? 'Individual' : f === 'both' ? 'Both' : 'Relays'}
+            </button>
+          ))}
+        </div>
+
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search name, club, or event"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full max-w-xs pl-10 pr-8 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+
+        <div className="flex gap-2 ml-auto">
+          <button
+            onClick={expandAll}
+            className="px-3 py-1.5 text-sm rounded border border-gray-200 hover:bg-gray-50"
+          >
             Expand All
           </button>
-          <button onClick={collapseAll} className="text-xs text-gray-500 hover:text-gray-700 font-medium whitespace-nowrap">
-            Collapse
+          <button
+            onClick={collapseAll}
+            className="px-3 py-1.5 text-sm rounded border border-gray-200 hover:bg-gray-50"
+          >
+            Collapse All
           </button>
         </div>
       </div>
 
-      {/* Results counter */}
+      {/* Individual entries */}
+      {eventFilter !== 'relay' && <>
       <p className="text-sm text-gray-600 mb-4">
         Showing <span className="font-semibold">{filtered.length}</span> clubs with{' '}
         <span className="font-semibold">{filtered.reduce((n: number, c: any) => n + c.swimmers.length, 0)}</span> swimmers
       </p>
 
-      {/* Club groups */}
       <div className="space-y-8">
         {filtered.map((club: any) => (
           <div key={club.club}>
@@ -180,9 +212,10 @@ export function EntryListClient({ clubs, showHeatLane = false, relays = [] }: {
           </div>
         ))}
       </div>
+      </>}
 
       {/* Relay entries section */}
-      {relays.length > 0 && (
+      {eventFilter !== 'individual' && relays.length > 0 && (
         <>
           <h2 className="font-display font-bold text-2xl text-dark-900 mt-12 mb-4 border-b-2 border-dark-800 pb-2">
             Relay Entries
