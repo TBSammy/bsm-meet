@@ -139,11 +139,11 @@ export function EntryListClient({ clubs, showHeatLane = false }: {
                       const hlText = showHeatLane && r.heat && r.lane && r.heat !== '0' && r.lane !== '0'
                         ? `H${r.heat}L${r.lane}` : ''
                       return (
-                        <div key={`${r.relayId}-${r.legNumber}`} className="flex items-center py-0.5 text-sm text-gray-400 italic">
-                          <span className="text-xs font-mono w-6 shrink-0 text-right mr-1.5 not-italic">{r.eventNumber || ''}</span>
-                          <span className="flex-1 truncate">{sexPrefix(r.eventGender)}{relayEventName(r.eventCode)} <span className="text-xs">(relay)</span></span>
-                          {showHeatLane && <span className="text-xs font-mono w-12 shrink-0 text-right not-italic">{hlText}</span>}
-                          <span className="font-mono text-xs text-right shrink-0 w-[4.5rem] ml-2 not-italic">{r.seedTime ? formatSeedTime(r.seedTime) : ''}</span>
+                        <div key={`${r.relayId}-${r.legNumber}`} className="flex items-center py-0.5 text-sm text-gray-400">
+                          <span className="text-xs font-mono w-6 shrink-0 text-right mr-1.5">{r.eventNumber || ''}</span>
+                          <span className="flex-1 truncate">{sexPrefix(r.eventGender)}{relayEventName(r.eventCode)}</span>
+                          {showHeatLane && <span className="text-xs font-mono w-12 shrink-0 text-right">{hlText}</span>}
+                          <span className="font-mono text-xs text-right shrink-0 w-[4.5rem] ml-2">{r.seedTime ? formatSeedTime(r.seedTime) : ''}</span>
                         </div>
                       )
                     }
