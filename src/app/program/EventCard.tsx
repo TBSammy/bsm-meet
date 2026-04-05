@@ -1,12 +1,17 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ChevronDown, ChevronRight, CheckCircle, Mic, Target } from 'lucide-react'
 
-export function EventCard({ eventNum, displayName, genderLabel, estTime, scheduledTime, deltaMinutes, entryCount, isComplete, bioIndicator, eventGoalIndicator, children }: {
-  eventNum: number, displayName: string, genderLabel: string, estTime?: string, scheduledTime?: string, deltaMinutes?: number, entryCount: number, isComplete: boolean, bioIndicator?: number, eventGoalIndicator?: number, children: React.ReactNode
+export function EventCard({ eventNum, displayName, genderLabel, estTime, scheduledTime, deltaMinutes, entryCount, isComplete, bioIndicator, eventGoalIndicator, forceExpand, overrideKey, children }: {
+  eventNum: number, displayName: string, genderLabel: string, estTime?: string, scheduledTime?: string, deltaMinutes?: number, entryCount: number, isComplete: boolean, bioIndicator?: number, eventGoalIndicator?: number, forceExpand?: 'all' | 'none' | null, overrideKey?: number, children: React.ReactNode
 }) {
   const [expanded, setExpanded] = useState(!isComplete)
+
+  useEffect(() => {
+    if (forceExpand === 'all') setExpanded(true)
+    else if (forceExpand === 'none') setExpanded(false)
+  }, [forceExpand, overrideKey])
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">

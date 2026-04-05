@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Mic, Filter, Target } from 'lucide-react'
+import { Mic, Target, Search, X } from 'lucide-react'
 import { useAnnouncer } from '@/components/AnnouncerContext'
 import { EventCard } from './EventCard'
 import { SwimmerBioModal } from './SwimmerBioModal'
@@ -87,13 +87,98 @@ export function ProgramContent({ sessions, events, bioMap, breaks = [] }: Progra
     eventCode: string
   } | null>(null)
   const [bioFilter, setBioFilter] = useState<'all' | 'bio'>('all')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [expandOverride, setExpandOverride] = useState<'all' | 'none' | null>(null)
+  const [overrideKey, setOverrideKey] = useState(0)
+  const [eventFilter, setEventFilter] = useState<'individual' | 'both' | 'relay'>('both')
 
   const bioCount = useMemo(() => Object.keys(bioMap).length, [bioMap])
 
   const eventsByNum = new Map(events.map(e => [e.eventNum, e]))
 
+  const lowerSearch = searchQuery.toLowerCase()
+
+  function eventMatchesSearch(ev: ProgramEvent): boolean {
+    if (!lowerSearch) return true
+    if (
+      ev.displayName.toLowerCase().includes(lowerSearch) ||
+      String(ev.eventNum).includes(lowerSearch)
+    ) return true
+    for (const heat of ev.heats) {
+      for (const s of heat.swimmers) {
+        if (
+          (s.swimmerName && s.swimmerName.toLowerCase().includes(lowerSearch)) ||
+          (s.clubCode && s.clubCode.toLowerCase().includes(lowerSearch)) ||
+          (s.teamName && s.teamName.toLowerCase().includes(lowerSearch))
+        ) return true
+      }
+    }
+    return false
+  }
+
+  function eventIsRelay(ev: ProgramEvent): boolean {
+    return ev.heats.some(h => h.swimmers.some(s => s.isRelay)) ||
+      ev.displayName.toLowerCase().includes('relay')
+  }
+
   return (
     <>
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-3 mb-6">
+        {/* Event type filter */}
+        <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden">
+          {(['individual', 'both', 'relay'] as const).map(f => (
+            <button
+              key={f}
+              onClick={() => setEventFilter(f)}
+              className={`px-3 py-1.5 text-sm font-bold ${
+                eventFilter === f
+                  ? 'bg-bsm-600 text-white'
+                  : 'bg-white text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              {f === 'individual' ? 'Individual' : f === 'both' ? 'Both' : 'Relays'}
+            </button>
+          ))}
+        </div>
+
+        {/* Search input */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Search name, club, or event"
+            className="w-full max-w-xs pl-10 pr-8 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-bsm-500/40"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+
+        {/* Expand / Collapse All */}
+        <div className="flex gap-2 ml-auto">
+          <button
+            onClick={() => { setExpandOverride('all'); setOverrideKey(k => k + 1) }}
+            className="px-3 py-1.5 text-sm rounded border border-gray-200 hover:bg-gray-50"
+          >
+            Expand All Events
+          </button>
+          <button
+            onClick={() => { setExpandOverride('none'); setOverrideKey(k => k + 1) }}
+            className="px-3 py-1.5 text-sm rounded border border-gray-200 hover:bg-gray-50"
+          >
+            Collapse All Events
+          </button>
+        </div>
+      </div>
+
       {isAnnouncer && (
         <div className="bg-bsm-50 border border-bsm-200 rounded-xl px-4 py-2.5 mb-6 flex flex-wrap items-center gap-2">
           <Mic className="h-4 w-4 text-bsm-600" />
@@ -128,6 +213,19 @@ export function ProgramContent({ sessions, events, bioMap, breaks = [] }: Progra
         const sessionEvents = events.filter(e => session.events.includes(e.eventNum))
         if (sessionEvents.length === 0) return null
 
+        // Apply event type filter
+        const typeFilteredEvents = sessionEvents.filter(ev => {
+          if (eventFilter === 'both') return true
+          const isRelay = eventIsRelay(ev)
+          if (eventFilter === 'relay') return isRelay
+          return !isRelay
+        })
+
+        if (typeFilteredEvents.length === 0) return null
+
+        // Determine which events match search
+        const anyMatch = typeFilteredEvents.some(ev => eventMatchesSearch(ev))
+
         return (
           <div key={session.session}>
             {sessIdx > 0 && (
@@ -146,8 +244,16 @@ export function ProgramContent({ sessions, events, bioMap, breaks = [] }: Progra
                 <span className="text-white/80 font-semibold">Starts {session.start}</span>
               </div>
 
+              {searchQuery && !anyMatch && (
+                <p className="text-center text-gray-400 text-sm py-6">No events match your search</p>
+              )}
+
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                {sessionEvents.map((ev) => {
+                {typeFilteredEvents.map((ev) => {
+                  const matches = eventMatchesSearch(ev)
+
+                  if (searchQuery && !matches) return null
+
                   // Count swimmers with bios in this event
                   const eventBioCount = isAnnouncer ? ev.heats.reduce((n, h) => n + h.swimmers.filter(s => s.swimmerId && bioMap[s.swimmerId]).length, 0) : 0
                   // Count swimmers with event-specific goals
@@ -173,6 +279,8 @@ export function ProgramContent({ sessions, events, bioMap, breaks = [] }: Progra
                     isComplete={ev.isComplete}
                     bioIndicator={isAnnouncer && eventBioCount > 0 ? eventBioCount : undefined}
                     eventGoalIndicator={isAnnouncer && eventGoalCount > 0 ? eventGoalCount : undefined}
+                    forceExpand={expandOverride}
+                    overrideKey={overrideKey}
                   >
                     {ev.heats.map((heat) => {
                       const visibleSwimmers = isAnnouncer && bioFilter === 'bio'
@@ -237,7 +345,6 @@ export function ProgramContent({ sessions, events, bioMap, breaks = [] }: Progra
                                       <td className={`px-3 py-1.5 font-medium text-gray-900 ${s.scratched ? 'line-through text-gray-400' : ''}`} colSpan={3}>
                                         {s.teamName}
                                         <span className="ml-2 text-xs text-gray-500">{s.age || ''}</span>
-                                        {s.scratched && <span className="ml-2 text-xs px-1 py-0.5 bg-orange-100 text-orange-700 rounded no-underline">SCR</span>}
                                         {isNS && <span className="ml-2 text-xs px-1 py-0.5 bg-gray-100 text-gray-600 rounded no-underline">NS</span>}
                                         {isDQ && <span className="ml-2 text-xs px-1 py-0.5 bg-red-100 text-red-700 rounded no-underline">DQ</span>}
                                       </td>
@@ -251,9 +358,7 @@ export function ProgramContent({ sessions, events, bioMap, breaks = [] }: Progra
                                       <td className={`px-3 py-1.5 font-medium hidden sm:table-cell ${isOut ? 'line-through text-gray-400' : 'text-gray-900'}`}>
                                         <span className="inline-flex items-center gap-1.5">
                                           {s.swimmerName}
-                                          {s.scratched && <span className="text-xs px-1 py-0.5 bg-orange-100 text-orange-700 rounded no-underline">SCR</span>}
-                                          {!isOut && hasBio && <Mic className="h-3.5 w-3.5 text-bsm-500" />}
-                                          {!isOut && hasEventGoal && <Target className="h-3.5 w-3.5 text-amber-500" />}
+                                          {!isOut && hasBio && <Mic className={`h-3.5 w-3.5 ${hasEventGoal ? 'text-amber-400' : 'text-bsm-500'}`} />}
                                         </span>
                                       </td>
                                       <td className={`px-3 py-1.5 text-xs text-gray-500 hidden sm:table-cell ${isOut ? 'line-through' : ''}`}>
@@ -273,9 +378,7 @@ export function ProgramContent({ sessions, events, bioMap, breaks = [] }: Progra
                                       <td className="px-3 py-1.5 sm:hidden" colSpan={3}>
                                         <div className={`font-medium inline-flex items-center gap-1.5 ${isOut ? 'line-through text-gray-400' : 'text-gray-900'}`}>
                                           {s.swimmerName}
-                                          {s.scratched && <span className="text-xs px-1 py-0.5 bg-orange-100 text-orange-700 rounded no-underline">SCR</span>}
-                                          {!isOut && hasBio && <Mic className="h-3.5 w-3.5 text-bsm-500" />}
-                                          {!isOut && hasEventGoal && <Target className="h-3.5 w-3.5 text-amber-500" />}
+                                          {!isOut && hasBio && <Mic className={`h-3.5 w-3.5 ${hasEventGoal ? 'text-amber-400' : 'text-bsm-500'}`} />}
                                         </div>
                                         <div className={`flex items-center gap-2 text-xs text-gray-500 ${isOut ? 'line-through' : ''}`}>
                                           <span>{s.age || ''}</span>
