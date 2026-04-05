@@ -1,14 +1,33 @@
 'use client'
 
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { Search, ChevronDown, ChevronRight } from 'lucide-react'
 import { formatSeedTime } from '@/lib/utils'
-import { eventName } from '@/lib/eventCodes'
+import { eventName, relayEventName } from '@/lib/eventCodes'
 import { NT_TIME_COLOR } from '@/lib/displayConstants'
 
-export function EntryListClient({ clubs, showHeatLane = false }: { clubs: any[]; showHeatLane?: boolean }) {
+const MEDLEY_LEG_STROKES = ['Backstroke', 'Breaststroke', 'Butterfly', 'Freestyle']
+
+function deriveRelayLegStroke(eventStroke: string | undefined, legNumber: number): string {
+  if (!eventStroke) return ''
+  if (eventStroke === 'Medley') return MEDLEY_LEG_STROKES[(legNumber - 1) % 4] || ''
+  return eventStroke
+}
+
+function relayEventStroke(eventCode: string): string {
+  const letter = eventCode.toUpperCase().trim().slice(-1)
+  if (letter === 'E') return 'Medley'
+  return 'Freestyle'
+}
+
+export function EntryListClient({ clubs, showHeatLane = false, relays = [] }: {
+  clubs: any[];
+  showHeatLane?: boolean;
+  relays?: any[];
+}) {
   const [search, setSearch] = useState('')
   const [expandedClubs, setExpandedClubs] = useState<Set<string>>(new Set())
+  const [expandedRelays, setExpandedRelays] = useState<Set<string>>(new Set())
 
   const filtered = search
     ? clubs.map(c => ({
@@ -27,6 +46,33 @@ export function EntryListClient({ clubs, showHeatLane = false }: { clubs: any[];
 
   const expandAll = () => setExpandedClubs(new Set(clubs.map((c: any) => c.club)))
   const collapseAll = () => setExpandedClubs(new Set())
+
+  const toggleRelayExpand = (id: string) => {
+    setExpandedRelays(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  // Group relays by event code, sorted by heat then lane within each event
+  const relaysByEvent = new Map<string, any[]>()
+  for (const r of relays) {
+    const arr = relaysByEvent.get(r.event_code) || []
+    arr.push(r)
+    relaysByEvent.set(r.event_code, arr)
+  }
+  for (const teams of relaysByEvent.values()) {
+    teams.sort((a: any, b: any) => {
+      const heatA = parseInt(a.heat || '0') || 0
+      const heatB = parseInt(b.heat || '0') || 0
+      if (heatA !== heatB) return heatA - heatB
+      const laneA = parseInt(a.lane || '0') || 0
+      const laneB = parseInt(b.lane || '0') || 0
+      return laneA - laneB
+    })
+  }
 
   return (
     <>
@@ -134,6 +180,79 @@ export function EntryListClient({ clubs, showHeatLane = false }: { clubs: any[];
           </div>
         ))}
       </div>
+
+      {/* Relay entries section */}
+      {relays.length > 0 && (
+        <>
+          <h2 className="font-display font-bold text-2xl text-dark-900 mt-12 mb-4 border-b-2 border-dark-800 pb-2">
+            Relay Entries
+          </h2>
+          <div className="space-y-6">
+            {Array.from(relaysByEvent.entries())
+              .sort(([a], [b]) => a.localeCompare(b))
+              .map(([eventCode, teams]) => {
+                const evName = relayEventName(eventCode)
+                const eventStroke = relayEventStroke(eventCode)
+                return (
+                  <div key={eventCode} className="mb-4">
+                    <h3 className="text-sm font-bold text-gray-700 mb-2">{evName}</h3>
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-xs text-gray-500 border-b">
+                          <th className="text-left py-1 w-6"></th>
+                          <th className="text-left py-1">Heat</th>
+                          <th className="text-left py-1">Lane</th>
+                          <th className="text-left py-1">Club</th>
+                          <th className="text-left py-1">Team</th>
+                          <th className="text-right py-1">Seed Time</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {teams.map((r: any) => {
+                          const isExpanded = expandedRelays.has(r.id)
+                          return (
+                            <Fragment key={r.id}>
+                              <tr
+                                className="border-b cursor-pointer hover:bg-gray-50"
+                                onClick={() => toggleRelayExpand(r.id)}
+                              >
+                                <td className="py-1">
+                                  {isExpanded
+                                    ? <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
+                                    : <ChevronRight className="h-3.5 w-3.5 text-gray-400" />}
+                                </td>
+                                <td className="py-1">{r.heat || '-'}</td>
+                                <td className="py-1">{r.lane || '-'}</td>
+                                <td className="py-1">{r.club_code || '-'}</td>
+                                <td className="py-1">{r.team_name || r.team_letter || '-'}</td>
+                                <td className="py-1 text-right font-mono">{formatSeedTime(r.seed_time)}</td>
+                              </tr>
+                              {isExpanded && r.legs && [...r.legs].sort((a: any, b: any) => a.leg_number - b.leg_number).map((leg: any) => {
+                                const legStroke = deriveRelayLegStroke(eventStroke, leg.leg_number)
+                                return (
+                                  <tr key={leg.id} className="bg-gray-50 text-xs">
+                                    <td></td>
+                                    <td className="py-0.5 pl-4" colSpan={2}>Leg {leg.leg_number} — {legStroke}</td>
+                                    <td className="py-0.5" colSpan={2}>
+                                      {leg.given_name && leg.surname
+                                        ? `${leg.surname}, ${leg.given_name}`
+                                        : leg.member_id || '—'}
+                                    </td>
+                                    <td className="py-0.5 text-right font-mono">{leg.seed_time ? formatSeedTime(leg.seed_time) : ''}</td>
+                                  </tr>
+                                )
+                              })}
+                            </Fragment>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )
+              })}
+          </div>
+        </>
+      )}
     </>
   )
 }
