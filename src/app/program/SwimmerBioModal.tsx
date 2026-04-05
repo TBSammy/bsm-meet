@@ -23,9 +23,10 @@ interface SwimmerBioModalProps {
   eventNum: number
   eventCode: string
   onClose: () => void
+  entryCount?: number
 }
 
-export function SwimmerBioModal({ bio, swimmerName, swimmerClub, swimmerAge, eventNum, eventCode, onClose }: SwimmerBioModalProps) {
+export function SwimmerBioModal({ bio, swimmerName, swimmerClub, swimmerAge, eventNum, eventCode, onClose, entryCount }: SwimmerBioModalProps) {
   const eventGoal = bio.event_goals?.[String(eventNum)]
 
   return (
@@ -47,6 +48,12 @@ export function SwimmerBioModal({ bio, swimmerName, swimmerClub, swimmerAge, eve
         </div>
 
         <div className="p-6 space-y-4">
+          {/* Entry count */}
+          {entryCount !== undefined && entryCount > 0 && (
+            <p className="text-sm text-gray-500">
+              Entered {entryCount} event{entryCount !== 1 ? 's' : ''} at this meet
+            </p>
+          )}
           {/* Event-specific goal — top priority for announcer */}
           {eventGoal && (
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">

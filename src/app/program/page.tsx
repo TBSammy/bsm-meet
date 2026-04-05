@@ -136,6 +136,13 @@ export default async function ProgramPage() {
     bioMap[b.swimmer_id] = b
   }
 
+  // Build entry count record keyed by swimmer_id (for bio modal "Entered X events" display)
+  const entryCountRecord: Record<string, number> = {}
+  for (const e of entries) {
+    const sid = (e as any).swimmer?.id
+    if (sid) entryCountRecord[sid] = (entryCountRecord[sid] || 0) + 1
+  }
+
   // Override session start times with computed first-event times (handles auto-start drift)
   const correctedSessions = sessionsForDisplay.map(s => {
     const firstEvent = s.events.find(ev => heatStartTimes.has(String(ev)))
@@ -156,6 +163,7 @@ export default async function ProgramPage() {
         events={processedEvents}
         bioMap={bioMap}
         breaks={breakDefs}
+        entryCountMap={entryCountRecord}
       />
     </div>
   )

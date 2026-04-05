@@ -74,9 +74,10 @@ interface ProgramContentProps {
   events: ProgramEvent[]
   bioMap: Record<string, BioProfile>
   breaks?: BreakDef[]
+  entryCountMap?: Record<string, number>
 }
 
-export function ProgramContent({ sessions, events, bioMap, breaks = [] }: ProgramContentProps) {
+export function ProgramContent({ sessions, events, bioMap, breaks = [], entryCountMap }: ProgramContentProps) {
   const { isAnnouncer } = useAnnouncer()
   const [bioModal, setBioModal] = useState<{
     bio: BioProfile
@@ -85,6 +86,7 @@ export function ProgramContent({ sessions, events, bioMap, breaks = [] }: Progra
     swimmerAge: string
     eventNum: number
     eventCode: string
+    entryCount?: number
   } | null>(null)
   const [bioFilter, setBioFilter] = useState<'all' | 'bio'>('all')
   const [searchQuery, setSearchQuery] = useState('')
@@ -328,6 +330,7 @@ export function ProgramContent({ sessions, events, bioMap, breaks = [] }: Progra
                                   swimmerAge: s.age || '',
                                   eventNum: ev.eventNum,
                                   eventCode: ev.eventCode,
+                                  entryCount: s.swimmerId ? (entryCountMap?.[s.swimmerId] ?? 0) : 0,
                                 })
                               } : undefined
 
@@ -429,6 +432,7 @@ export function ProgramContent({ sessions, events, bioMap, breaks = [] }: Progra
           eventNum={bioModal.eventNum}
           eventCode={bioModal.eventCode}
           onClose={() => setBioModal(null)}
+          entryCount={bioModal.entryCount}
         />
       )}
     </>
