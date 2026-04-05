@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { formatTime } from '@/lib/utils'
 import { courseLength as getCourseLength } from '@/lib/eventCodes'
 import { BADGE, PLACE_COLOR, NT_TIME_COLOR, ordinal } from '@/lib/displayConstants'
-import { Filter, X, Search, ChevronDown, ChevronRight, ChevronsUpDown, Users } from 'lucide-react'
+import { X, Search, ChevronDown, ChevronRight, Users } from 'lucide-react'
 
 /** Determine swim status from result fields — mirrors MC getSwimStatus() */
 function getSwimStatus(r: any): 'DQ' | 'NS' | number | null {
@@ -192,7 +192,7 @@ function RelayLegsExpansion({ legs, eventNum, eventName, onShowSplits }: {
 
 export function ResultsClient({ events, meetCourse, pointsVisible }: { events: [number, { name: string, eventGender: string, results: any[] }][], meetCourse: string, pointsVisible?: boolean }) {
   const courseLen = getCourseLength(meetCourse)
-  const [filter, setFilter] = useState<'all' | 'individual' | 'relay'>('all')
+  const [filter, setFilter] = useState<'individual' | 'both' | 'relay'>('both')
   const [search, setSearch] = useState('')
   const [showSplits, setShowSplits] = useState<{ name: string, event: string, splits: any[], resultTime?: number | null } | null>(null)
   const [collapsedEvents, setCollapsedEvents] = useState<Set<number>>(new Set())
@@ -203,7 +203,7 @@ export function ResultsClient({ events, meetCourse, pointsVisible }: { events: [
 
   const filtered = events
     .filter(([, ev]) => {
-      if (filter === 'all') return true
+      if (filter === 'both') return true
       const isRelay = ev.name.toLowerCase().includes('relay')
       return filter === 'relay' ? isRelay : !isRelay
     })
@@ -251,55 +251,55 @@ export function ResultsClient({ events, meetCourse, pointsVisible }: { events: [
 
   return (
     <>
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-navy-400" />
-          <input
-            type="text"
-            placeholder="Search by name, club, or event..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-8 py-2 rounded-lg border border-navy-200 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-          />
-          {search && (
-            <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2">
-              <X className="h-4 w-4 text-navy-400 hover:text-navy-600" />
-            </button>
-          )}
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          {(['all', 'individual', 'relay'] as const).map((f) => (
+      <div className="flex flex-wrap items-center gap-3 mb-6">
+        <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden">
+          {(['individual', 'both', 'relay'] as const).map(f => (
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className={`px-3 py-1.5 text-sm font-bold ${
                 filter === f
                   ? 'bg-cyan-600 text-white'
-                  : 'bg-navy-100 text-navy-600 hover:bg-navy-200'
+                  : 'bg-white text-gray-600 hover:bg-gray-50'
               }`}
             >
-              <Filter className="h-3.5 w-3.5 inline mr-1.5" />
-              {f === 'all' ? 'All Events' : f === 'individual' ? 'Individual' : 'Relays'}
+              {f === 'individual' ? 'Individual' : f === 'both' ? 'Both' : 'Relays'}
             </button>
           ))}
-          <div className="flex gap-1 ml-1">
+        </div>
+
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search name, club, or event"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full max-w-xs pl-10 pr-8 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
+          />
+          {search && (
             <button
-              onClick={expandAll}
-              className="px-3 py-2 rounded-lg text-sm font-medium bg-navy-100 text-navy-600 hover:bg-navy-200 transition-colors"
-              title="Expand All"
+              onClick={() => setSearch('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
             >
-              <ChevronsUpDown className="h-3.5 w-3.5 inline mr-1" />
-              Expand
+              <X className="h-4 w-4" />
             </button>
-            <button
-              onClick={collapseAll}
-              className="px-3 py-2 rounded-lg text-sm font-medium bg-navy-100 text-navy-600 hover:bg-navy-200 transition-colors"
-              title="Collapse All"
-            >
-              <ChevronRight className="h-3.5 w-3.5 inline mr-1" />
-              Collapse
-            </button>
-          </div>
+          )}
+        </div>
+
+        <div className="flex gap-2 ml-auto">
+          <button
+            onClick={expandAll}
+            className="px-3 py-1.5 text-sm rounded border border-gray-200 hover:bg-gray-50"
+          >
+            Expand All Events
+          </button>
+          <button
+            onClick={collapseAll}
+            className="px-3 py-1.5 text-sm rounded border border-gray-200 hover:bg-gray-50"
+          >
+            Collapse All Events
+          </button>
         </div>
       </div>
 
@@ -484,13 +484,13 @@ export function ResultsClient({ events, meetCourse, pointsVisible }: { events: [
         <div className="flex justify-center gap-3 mt-4">
           <button
             onClick={expandAll}
-            className="px-4 py-2 rounded-lg text-sm font-medium bg-navy-100 text-navy-600 hover:bg-navy-200 transition-colors"
+            className="px-3 py-1.5 text-sm rounded border border-gray-200 hover:bg-gray-50"
           >
             Expand All Events
           </button>
           <button
             onClick={collapseAll}
-            className="px-4 py-2 rounded-lg text-sm font-medium bg-navy-100 text-navy-600 hover:bg-navy-200 transition-colors"
+            className="px-3 py-1.5 text-sm rounded border border-gray-200 hover:bg-gray-50"
           >
             Collapse All Events
           </button>
