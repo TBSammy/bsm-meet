@@ -47,6 +47,7 @@ export default async function EntriesPage() {
       swimmer.relays.push({
         relayId: r.id,
         eventCode: r.event_code,
+        eventGender: r.event_gender || '',
         eventNumber: r.event_number || '',
         heat: r.heat || '',
         lane: r.lane || '',

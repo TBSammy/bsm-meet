@@ -24,6 +24,14 @@ export function ordinal(n: number): string {
   return `${n}${suffixes.get(pr.select(n)) ?? 'th'}`;
 }
 
+// Sex prefix for event names (entry list, program, results)
+export function sexPrefix(gender: string | null | undefined): string {
+  if (gender === 'Male') return 'Mens ';
+  if (gender === 'Female') return 'Womens ';
+  if (gender === 'Mixed') return 'Mixed ';
+  return '';
+}
+
 export const BADGE_LEGEND = {
   EXH: 'Exhibition',
   IN:  'Checked In',

@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Search, X, ChevronDown, ChevronRight } from 'lucide-react'
 import { formatSeedTime } from '@/lib/utils'
 import { eventName, relayEventName } from '@/lib/eventCodes'
-import { NT_TIME_COLOR } from '@/lib/displayConstants'
+import { NT_TIME_COLOR, sexPrefix } from '@/lib/displayConstants'
 
 export function EntryListClient({ clubs, showHeatLane = false }: {
   clubs: any[];
@@ -123,7 +123,7 @@ export function EntryListClient({ clubs, showHeatLane = false }: {
                         <div key={e.id} className={`flex items-center py-0.5 text-sm ${isOut ? 'opacity-50 line-through text-gray-400' : ''}`}>
                           <span className="text-xs font-mono text-gray-400 w-6 shrink-0 text-right mr-1.5">{e.event_number || ''}</span>
                           <span className="flex-1 truncate text-gray-700">
-                            {eventName(e.event_code)}
+                            {sexPrefix(e.event_gender)}{eventName(e.event_code)}
                           </span>
                           {showHeatLane && <span className="text-xs text-gray-400 font-mono w-12 shrink-0 text-right">{hlText}</span>}
                           {!isOut && (
@@ -141,7 +141,7 @@ export function EntryListClient({ clubs, showHeatLane = false }: {
                       return (
                         <div key={`${r.relayId}-${r.legNumber}`} className="flex items-center py-0.5 text-sm text-gray-400 italic">
                           <span className="text-xs font-mono w-6 shrink-0 text-right mr-1.5 not-italic">{r.eventNumber || ''}</span>
-                          <span className="flex-1 truncate">{relayEventName(r.eventCode)} <span className="text-xs">(relay)</span></span>
+                          <span className="flex-1 truncate">{sexPrefix(r.eventGender)}{relayEventName(r.eventCode)} <span className="text-xs">(relay)</span></span>
                           {showHeatLane && <span className="text-xs font-mono w-12 shrink-0 text-right not-italic">{hlText}</span>}
                           <span className="font-mono text-xs text-right shrink-0 w-[4.5rem] ml-2 not-italic">{r.seedTime ? formatSeedTime(r.seedTime) : ''}</span>
                         </div>
