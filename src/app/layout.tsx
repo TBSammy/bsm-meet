@@ -24,7 +24,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body className="min-h-screen flex flex-col bg-white">
         <AnnouncerProvider>
-          <Header entriesClosed={campaign ? !!campaign.entries_closed : true} resultsLive={campaign ? !!campaign.results_live : true} />
+          <Header entriesClosed={campaign ? !!campaign.entries_closed : true} resultsLive={campaign ? !!campaign.results_live : true} programLive={campaign ? !!campaign.program_live : true} />
           <main className="flex-1">{children}</main>
           <Footer />
         </AnnouncerProvider>
