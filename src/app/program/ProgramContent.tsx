@@ -1,11 +1,18 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { Mic, Target, Search, X } from 'lucide-react'
+import { useState, useMemo, Fragment } from 'react'
+import { Mic, Target, Search, X, ChevronDown, ChevronRight } from 'lucide-react'
 import { useAnnouncer } from '@/components/AnnouncerContext'
 import { EventCard } from './EventCard'
 import { SwimmerBioModal } from './SwimmerBioModal'
 import { formatSeedTime } from '@/lib/utils'
+import { deriveRelayLegStroke } from '@/lib/displayConstants'
+
+interface RelayLeg {
+  legNumber: number
+  swimmerName: string
+  age: string
+}
 
 interface HeatSwimmer {
   key: string
@@ -16,6 +23,8 @@ interface HeatSwimmer {
   age?: string
   clubCode?: string
   teamName?: string
+  teamLetter?: string
+  legs?: RelayLeg[]
   originalTime: number | string | null
   eventCode: string
   scratched?: boolean
@@ -95,6 +104,18 @@ export function ProgramContent({ sessions, events, bioMap, breaks = [], entryCou
   const [expandOverride, setExpandOverride] = useState<'all' | 'none' | null>(null)
   const [overrideKey, setOverrideKey] = useState(0)
   const [eventFilter, setEventFilter] = useState<'individual' | 'both' | 'relay'>('both')
+  const [expandedRelays, setExpandedRelays] = useState<Set<string>>(new Set())
+
+  const toggleRelay = (key: string) => {
+    setExpandedRelays(prev => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key); else next.add(key)
+      return next
+    })
+  }
+
+  const RELAY_STROKE_MAP: Record<string, string> = { A: 'Freestyle', E: 'Medley' }
+  const relayStroke = (eventCode: string) => RELAY_STROKE_MAP[eventCode.slice(-1).toUpperCase()] || ''
 
   const bioCount = useMemo(() => Object.keys(bioMap).length, [bioMap])
 
@@ -336,6 +357,52 @@ export function ProgramContent({ sessions, events, bioMap, breaks = [], entryCou
                                 })
                               } : undefined
 
+                              if (s.isRelay) {
+                                const isExpanded = expandedRelays.has(s.key)
+                                const hasLegs = s.legs && s.legs.length > 0
+                                const stroke = relayStroke(s.eventCode)
+                                const colCount = heatLaneVisible ? 5 : 4
+                                return (
+                                  <Fragment key={s.key}>
+                                    <tr
+                                      className={`border-b border-gray-100 text-sm ${isOut ? 'opacity-50' : ''} ${hasLegs ? 'cursor-pointer hover:bg-gray-50' : 'hover:bg-gray-50/50'}`}
+                                      onClick={hasLegs ? () => toggleRelay(s.key) : undefined}
+                                    >
+                                      {heatLaneVisible && (
+                                        <td className="text-center px-3 py-1.5 font-mono text-xs text-gray-400">{s.lane || ''}</td>
+                                      )}
+                                      <td className={`px-3 py-1.5 font-medium text-gray-900 ${s.scratched ? 'line-through text-gray-400' : ''}`} colSpan={heatLaneVisible ? 3 : 2}>
+                                        <span className="inline-flex items-center gap-1.5">
+                                          {s.teamName} Relay {s.teamLetter || 'A'}
+                                          {s.age && <span className="text-xs text-gray-500">({s.age}+)</span>}
+                                        </span>
+                                      </td>
+                                      <td className="text-right px-3 py-1.5 font-mono text-xs text-gray-600">
+                                        <span className="inline-flex items-center gap-1">
+                                          {isOut ? '' : formatSeedTime(s.originalTime)}
+                                          {hasLegs && (isExpanded
+                                            ? <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
+                                            : <ChevronRight className="h-3.5 w-3.5 text-gray-400" />
+                                          )}
+                                        </span>
+                                      </td>
+                                    </tr>
+                                    {isExpanded && s.legs?.map((leg) => (
+                                      <tr key={`${s.key}-leg-${leg.legNumber}`} className="bg-gray-50 text-xs border-b border-gray-100/50">
+                                        <td colSpan={colCount} className="py-1 pl-8 pr-3">
+                                          <div className="flex items-center gap-3">
+                                            <span className="text-gray-400 w-10 shrink-0">Leg {leg.legNumber}</span>
+                                            <span className="text-gray-500 w-20 shrink-0">{deriveRelayLegStroke(stroke, leg.legNumber)}</span>
+                                            <span className="text-gray-700">{leg.swimmerName}</span>
+                                            <span className="text-gray-400 ml-auto">{leg.age}</span>
+                                          </div>
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </Fragment>
+                                )
+                              }
+
                               return (
                                 <tr
                                   key={s.key}
@@ -347,60 +414,48 @@ export function ProgramContent({ sessions, events, bioMap, breaks = [], entryCou
                                     {s.lane || ''}
                                   </td>
                                   )}
-                                  {s.isRelay ? (
-                                    <>
-                                      <td className={`px-3 py-1.5 font-medium text-gray-900 ${s.scratched ? 'line-through text-gray-400' : ''}`} colSpan={3}>
-                                        {s.teamName}
-                                        <span className="ml-2 text-xs text-gray-500">{s.age || ''}</span>
-                                      </td>
-                                      <td className="text-right px-3 py-1.5 font-mono text-xs text-gray-600">
-                                        {isOut ? '' : formatSeedTime(s.originalTime)}
-                                      </td>
-                                    </>
-                                  ) : (
-                                    <>
-                                      {/* Desktop */}
-                                      <td className={`px-3 py-1.5 font-medium hidden sm:table-cell ${isOut ? 'line-through text-gray-400' : 'text-gray-900'}`}>
-                                        <span className="inline-flex items-center gap-1.5">
-                                          {s.swimmerName}
-                                          {s.checkedIn && !isOut && <span className="text-[10px] px-1 py-0.5 bg-green-100 text-green-700 rounded font-semibold no-underline">In</span>}
-                                          {!isOut && hasBio && <Mic className={`h-3.5 w-3.5 ${hasEventGoal ? 'text-amber-400' : 'text-bsm-500'}`} />}
+                                  <>
+                                    {/* Desktop */}
+                                    <td className={`px-3 py-1.5 font-medium hidden sm:table-cell ${isOut ? 'line-through text-gray-400' : 'text-gray-900'}`}>
+                                      <span className="inline-flex items-center gap-1.5">
+                                        {s.swimmerName}
+                                        {s.checkedIn && !isOut && <span className="text-[10px] px-1 py-0.5 bg-green-100 text-green-700 rounded font-semibold no-underline">In</span>}
+                                        {!isOut && hasBio && <Mic className={`h-3.5 w-3.5 ${hasEventGoal ? 'text-amber-400' : 'text-bsm-500'}`} />}
+                                      </span>
+                                    </td>
+                                    <td className={`px-3 py-1.5 text-xs text-gray-500 hidden sm:table-cell ${isOut ? 'line-through' : ''}`}>
+                                      {s.age || ''}
+                                    </td>
+                                    <td className={`px-3 py-1.5 text-xs font-semibold hidden sm:table-cell ${isOut ? 'line-through text-gray-400' : 'text-blue-600'}`}>
+                                      {s.clubCode || ''}
+                                    </td>
+                                    <td className="text-right px-3 py-1.5 font-mono text-xs hidden sm:table-cell">
+                                      {s.scratched ? '' : (
+                                        <span className={!s.originalTime ? 'text-red-500 font-semibold' : 'text-gray-600'}>
+                                          {formatSeedTime(s.originalTime)}
                                         </span>
-                                      </td>
-                                      <td className={`px-3 py-1.5 text-xs text-gray-500 hidden sm:table-cell ${isOut ? 'line-through' : ''}`}>
-                                        {s.age || ''}
-                                      </td>
-                                      <td className={`px-3 py-1.5 text-xs font-semibold hidden sm:table-cell ${isOut ? 'line-through text-gray-400' : 'text-blue-600'}`}>
-                                        {s.clubCode || ''}
-                                      </td>
-                                      <td className="text-right px-3 py-1.5 font-mono text-xs hidden sm:table-cell">
-                                        {s.scratched ? '' : (
-                                          <span className={!s.originalTime ? 'text-red-500 font-semibold' : 'text-gray-600'}>
-                                            {formatSeedTime(s.originalTime)}
-                                          </span>
-                                        )}
-                                      </td>
-                                      {/* Mobile */}
-                                      <td className="px-3 py-1.5 sm:hidden" colSpan={3}>
-                                        <div className={`font-medium inline-flex items-center gap-1.5 ${isOut ? 'line-through text-gray-400' : 'text-gray-900'}`}>
-                                          {s.swimmerName}
-                                          {s.checkedIn && !isOut && <span className="text-[10px] px-1 py-0.5 bg-green-100 text-green-700 rounded font-semibold no-underline">In</span>}
-                                          {!isOut && hasBio && <Mic className={`h-3.5 w-3.5 ${hasEventGoal ? 'text-amber-400' : 'text-bsm-500'}`} />}
-                                        </div>
-                                        <div className={`flex items-center gap-2 text-xs text-gray-500 ${isOut ? 'line-through' : ''}`}>
-                                          <span>{s.age || ''}</span>
-                                          <span className={`font-semibold ${s.scratched ? 'text-gray-400' : 'text-blue-600'}`}>{s.clubCode || ''}</span>
-                                        </div>
-                                      </td>
-                                      <td className="text-right px-3 py-1.5 font-mono text-xs sm:hidden">
-                                        {s.scratched ? '' : (
-                                          <span className={!s.originalTime ? 'text-red-500 font-semibold' : 'text-gray-600'}>
-                                            {formatSeedTime(s.originalTime)}
-                                          </span>
-                                        )}
-                                      </td>
-                                    </>
-                                  )}
+                                      )}
+                                    </td>
+                                    {/* Mobile */}
+                                    <td className="px-3 py-1.5 sm:hidden" colSpan={3}>
+                                      <div className={`font-medium inline-flex items-center gap-1.5 ${isOut ? 'line-through text-gray-400' : 'text-gray-900'}`}>
+                                        {s.swimmerName}
+                                        {s.checkedIn && !isOut && <span className="text-[10px] px-1 py-0.5 bg-green-100 text-green-700 rounded font-semibold no-underline">In</span>}
+                                        {!isOut && hasBio && <Mic className={`h-3.5 w-3.5 ${hasEventGoal ? 'text-amber-400' : 'text-bsm-500'}`} />}
+                                      </div>
+                                      <div className={`flex items-center gap-2 text-xs text-gray-500 ${isOut ? 'line-through' : ''}`}>
+                                        <span>{s.age || ''}</span>
+                                        <span className={`font-semibold ${s.scratched ? 'text-gray-400' : 'text-blue-600'}`}>{s.clubCode || ''}</span>
+                                      </div>
+                                    </td>
+                                    <td className="text-right px-3 py-1.5 font-mono text-xs sm:hidden">
+                                      {s.scratched ? '' : (
+                                        <span className={!s.originalTime ? 'text-red-500 font-semibold' : 'text-gray-600'}>
+                                          {formatSeedTime(s.originalTime)}
+                                        </span>
+                                      )}
+                                    </td>
+                                  </>
                                 </tr>
                               )
                             })}

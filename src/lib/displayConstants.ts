@@ -32,6 +32,15 @@ export function sexPrefix(gender: string | null | undefined): string {
   return '';
 }
 
+// Relay leg stroke derivation
+const MEDLEY_LEG_STROKES: readonly string[] = ['Backstroke', 'Breaststroke', 'Butterfly', 'Freestyle'];
+
+export function deriveRelayLegStroke(eventStroke: string | undefined, legNumber: number): string {
+  if (!eventStroke) return '';
+  if (eventStroke === 'Medley') return MEDLEY_LEG_STROKES[(legNumber - 1) % 4] || '';
+  return eventStroke;
+}
+
 export const BADGE_LEGEND = {
   EXH: 'Exhibition',
   IN:  'Checked In',

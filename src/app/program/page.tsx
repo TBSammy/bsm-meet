@@ -118,6 +118,12 @@ export default async function ProgramPage() {
         age: s.isRelay ? (s.age || '') : (s.swimmer?.age_group || ''),
         clubCode: s.swimmer?.club_code || '',
         teamName: s.isRelay ? (s.team_name || s.club_name || '') : undefined,
+        teamLetter: s.isRelay ? (s.team_letter || 'A') : undefined,
+        legs: s.isRelay ? ((s.legs || []) as any[]).sort((a: any, b: any) => a.leg_number - b.leg_number).map((l: any) => ({
+          legNumber: l.leg_number as number,
+          swimmerName: `${l.given_name || ''} ${l.surname || ''}`.trim(),
+          age: String(l.age || l.age_group || ''),
+        })) : undefined,
         originalTime: s.original_time,
         eventCode: eventData.eventCode,
         scratched: !!s.scratched,
