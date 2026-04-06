@@ -1,4 +1,4 @@
-import { getEntries, getRelays, getBioProfiles, getSessionPlan } from '@/lib/supabase/queries'
+import { getEntries, getRelays, getBioProfiles, getSessionPlan, getCampaign } from '@/lib/supabase/queries'
 import { eventName, relayEventName } from '@/lib/eventCodes'
 import { ProgramContent } from './ProgramContent'
 import { SESSION_DEFS, computeHeatStartTimes, deriveSessionDefs } from '@/lib/sessions'
@@ -7,6 +7,16 @@ import type { TimingOptions, BreakDef } from '@/lib/sessions'
 export const revalidate = 60
 
 export default async function ProgramPage() {
+  const campaign = await getCampaign()
+  if (!campaign?.program_live) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-16 text-center">
+        <h1 className="font-display font-bold text-3xl text-gray-900 mb-4">Program Not Yet Available</h1>
+        <p className="text-gray-500">The meet program will be published here once it is finalised.</p>
+      </div>
+    )
+  }
+
   const [entries, relays, bios, sessionPlan] = await Promise.all([
     getEntries(), getRelays(), getBioProfiles(), getSessionPlan()
   ])
@@ -111,6 +121,7 @@ export default async function ProgramPage() {
         originalTime: s.original_time,
         eventCode: eventData.eventCode,
         scratched: !!s.scratched,
+        checkedIn: !!s.checked_in,
         resultDq: s.result_dq || null,
         resultTime: s.result_time ?? null,
       })),
@@ -164,6 +175,7 @@ export default async function ProgramPage() {
         bioMap={bioMap}
         breaks={breakDefs}
         entryCountMap={entryCountRecord}
+        heatLaneVisible={!!campaign?.heat_lane_visible}
       />
     </div>
   )

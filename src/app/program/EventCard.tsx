@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ChevronDown, ChevronRight, CheckCircle, Mic, Target } from 'lucide-react'
+import { ChevronDown, ChevronRight, CheckCircle, Mic } from 'lucide-react'
 
-export function EventCard({ eventNum, displayName, genderLabel, estTime, scheduledTime, deltaMinutes, entryCount, isComplete, bioIndicator, eventGoalIndicator, forceExpand, overrideKey, children }: {
-  eventNum: number, displayName: string, genderLabel: string, estTime?: string, scheduledTime?: string, deltaMinutes?: number, entryCount: number, isComplete: boolean, bioIndicator?: number, eventGoalIndicator?: number, forceExpand?: 'all' | 'none' | null, overrideKey?: number, children: React.ReactNode
+export function EventCard({ eventNum, displayName, genderLabel, scheduledTime, entryCount, isComplete, bioIndicator, eventGoalIndicator, forceExpand, overrideKey, children }: {
+  eventNum: number, displayName: string, genderLabel: string, scheduledTime?: string, entryCount: number, isComplete: boolean, bioIndicator?: number, eventGoalIndicator?: number, forceExpand?: 'all' | 'none' | null, overrideKey?: number, children: React.ReactNode
 }) {
   const [expanded, setExpanded] = useState(!isComplete)
 
@@ -34,18 +34,12 @@ export function EventCard({ eventNum, displayName, genderLabel, estTime, schedul
           )}
           {eventGoalIndicator && (
             <span className="inline-flex items-center gap-0.5 text-xs text-amber-600 font-semibold">
-              <Target className="h-3.5 w-3.5" />{eventGoalIndicator}
+              <Mic className="h-3.5 w-3.5" />{eventGoalIndicator}
             </span>
           )}
           {isComplete && <CheckCircle className="h-4 w-4 text-green-500" />}
-          {estTime && (
-            <span className="font-mono text-xs text-gray-500">
-              {deltaMinutes !== 0 && scheduledTime !== estTime ? (
-                <><s className="text-gray-400">{scheduledTime}</s> <span className={deltaMinutes! > 0 ? 'text-red-500' : 'text-green-600'}>{estTime}</span></>
-              ) : (
-                <>~{estTime}</>
-              )}
-            </span>
+          {scheduledTime && (
+            <span className="font-mono text-xs text-gray-500">{scheduledTime}</span>
           )}
           <span className="text-xs text-gray-500">
             {entryCount} {entryCount === 1 ? 'entry' : 'entries'}

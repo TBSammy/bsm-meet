@@ -19,6 +19,7 @@ interface HeatSwimmer {
   originalTime: number | string | null
   eventCode: string
   scratched?: boolean
+  checkedIn?: boolean
   resultDq?: string | null
   resultTime?: number | null
 }
@@ -75,9 +76,10 @@ interface ProgramContentProps {
   bioMap: Record<string, BioProfile>
   breaks?: BreakDef[]
   entryCountMap?: Record<string, number>
+  heatLaneVisible?: boolean
 }
 
-export function ProgramContent({ sessions, events, bioMap, breaks = [], entryCountMap }: ProgramContentProps) {
+export function ProgramContent({ sessions, events, bioMap, breaks = [], entryCountMap, heatLaneVisible = true }: ProgramContentProps) {
   const { isAnnouncer } = useAnnouncer()
   const [bioModal, setBioModal] = useState<{
     bio: BioProfile
@@ -274,9 +276,7 @@ export function ProgramContent({ sessions, events, bioMap, breaks = [], entryCou
                     eventNum={ev.eventNum}
                     displayName={ev.displayName}
                     genderLabel={ev.genderLabel}
-                    estTime={ev.estTime}
                     scheduledTime={ev.scheduledTime}
-                    deltaMinutes={ev.deltaMinutes}
                     entryCount={ev.entryCount}
                     isComplete={ev.isComplete}
                     bioIndicator={isAnnouncer && eventBioCount > 0 ? eventBioCount : undefined}
@@ -292,6 +292,7 @@ export function ProgramContent({ sessions, events, bioMap, breaks = [], entryCou
 
                       return (
                       <div key={heat.num}>
+                        {heatLaneVisible && (
                         <div className="flex items-center gap-4 px-4 py-1.5 bg-blue-50 border-b border-blue-100 font-semibold text-sm text-blue-900">
                           <span>Heat {heat.num} of {heat.total} — Timed Finals</span>
                           {heat.estTime && (
@@ -304,11 +305,12 @@ export function ProgramContent({ sessions, events, bioMap, breaks = [], entryCou
                             </span>
                           )}
                         </div>
+                        )}
 
                         <table className="w-full">
                           <thead>
                             <tr className="text-gray-700 text-xs font-semibold bg-gray-50 border-b border-gray-200">
-                              <th className="text-center px-3 py-1.5 w-12">Ln</th>
+                              {heatLaneVisible && <th className="text-center px-3 py-1.5 w-12">Ln</th>}
                               <th className="text-left px-3 py-1.5">Name</th>
                               <th className="text-left px-3 py-1.5 w-20 hidden sm:table-cell">Age</th>
                               <th className="text-left px-3 py-1.5 w-24 hidden sm:table-cell">Club</th>
@@ -340,16 +342,16 @@ export function ProgramContent({ sessions, events, bioMap, breaks = [], entryCou
                                   className={`border-b border-gray-100 text-sm ${isOut ? 'opacity-50' : ''} ${hasBio && !isOut ? 'hover:bg-bsm-50 cursor-pointer' : 'hover:bg-gray-50/50'}`}
                                   onClick={isOut ? undefined : handleClick}
                                 >
+                                  {heatLaneVisible && (
                                   <td className="text-center px-3 py-1.5 font-mono text-xs text-gray-400">
                                     {s.lane || ''}
                                   </td>
+                                  )}
                                   {s.isRelay ? (
                                     <>
                                       <td className={`px-3 py-1.5 font-medium text-gray-900 ${s.scratched ? 'line-through text-gray-400' : ''}`} colSpan={3}>
                                         {s.teamName}
                                         <span className="ml-2 text-xs text-gray-500">{s.age || ''}</span>
-                                        {isNS && <span className="ml-2 text-xs px-1 py-0.5 bg-gray-100 text-gray-600 rounded no-underline">NS</span>}
-                                        {isDQ && <span className="ml-2 text-xs px-1 py-0.5 bg-red-100 text-red-700 rounded no-underline">DQ</span>}
                                       </td>
                                       <td className="text-right px-3 py-1.5 font-mono text-xs text-gray-600">
                                         {isOut ? '' : formatSeedTime(s.originalTime)}
@@ -361,6 +363,7 @@ export function ProgramContent({ sessions, events, bioMap, breaks = [], entryCou
                                       <td className={`px-3 py-1.5 font-medium hidden sm:table-cell ${isOut ? 'line-through text-gray-400' : 'text-gray-900'}`}>
                                         <span className="inline-flex items-center gap-1.5">
                                           {s.swimmerName}
+                                          {s.checkedIn && !isOut && <span className="text-[10px] px-1 py-0.5 bg-green-100 text-green-700 rounded font-semibold no-underline">In</span>}
                                           {!isOut && hasBio && <Mic className={`h-3.5 w-3.5 ${hasEventGoal ? 'text-amber-400' : 'text-bsm-500'}`} />}
                                         </span>
                                       </td>
@@ -381,6 +384,7 @@ export function ProgramContent({ sessions, events, bioMap, breaks = [], entryCou
                                       <td className="px-3 py-1.5 sm:hidden" colSpan={3}>
                                         <div className={`font-medium inline-flex items-center gap-1.5 ${isOut ? 'line-through text-gray-400' : 'text-gray-900'}`}>
                                           {s.swimmerName}
+                                          {s.checkedIn && !isOut && <span className="text-[10px] px-1 py-0.5 bg-green-100 text-green-700 rounded font-semibold no-underline">In</span>}
                                           {!isOut && hasBio && <Mic className={`h-3.5 w-3.5 ${hasEventGoal ? 'text-amber-400' : 'text-bsm-500'}`} />}
                                         </div>
                                         <div className={`flex items-center gap-2 text-xs text-gray-500 ${isOut ? 'line-through' : ''}`}>
