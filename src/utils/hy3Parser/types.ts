@@ -82,6 +82,7 @@ export interface HY3Relay {
   event_code: string;
   event_number?: string;
   event_gender?: string;
+  team_letter?: string;   // 'A' | 'B' | 'C' | 'D' — from F1 cols 7-8
   event_legs?: number;
   leg_distance?: number;
   r_score: string;

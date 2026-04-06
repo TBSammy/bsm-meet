@@ -29,6 +29,19 @@ function computeAgeGroup(age: number): string {
   return `${low}-${low + 4}`;
 }
 
+/** Normalize HY3 relay/event gender codes to canonical strings.
+ * Handles E1 2-char codes (MM, FW, FF, XF, XM, XX) and
+ * F1 3-char codes (FFF, FFW, MMM, MMW, XXX) from all MM5 versions.
+ * Uses first-character match — future MM5 variants handled automatically. */
+function normalizeGenderCode(code: string): 'Male' | 'Female' | 'Mixed' | undefined {
+  const c = code.trim().toUpperCase();
+  if (!c) return undefined;
+  if (c[0] === 'F') return 'Female';
+  if (c[0] === 'M') return 'Male';
+  if (c[0] === 'X') return 'Mixed';
+  return undefined;
+}
+
 /** Detect NT from an E1 line (from NT Portal) */
 function detectNT(line: string): { isNT: boolean; course: 'S' | 'L' | null } {
   if (/\bNTS\b/.test(line)) return { isNT: true, course: 'S' };
@@ -183,11 +196,7 @@ export function parseHY3(text: string): HY3ParseResult {
           const key = sliceFixed(line, 4, 13);
           const eventCode = sliceFixed(line, 16, 22).trim();
           const genderCode = sliceFixed(line, 14, 15).trim();
-          const eventGender =
-            genderCode === 'FW' || genderCode === 'FF' ? 'Female' :
-            genderCode === 'MM' ? 'Male' :
-            genderCode === 'XX' || genderCode === 'XF' || genderCode === 'XM' ? 'Mixed' :
-            undefined;
+          const eventGender = normalizeGenderCode(genderCode);
           const seedtime = sliceFixed(line, 52, 60).trim();
           const eventNum = sliceFixed(line, 40, 42).trim(); // 3 chars: covers 1-pos shift between entry-only vs results files
           const pointsStr = sliceFixed(line, 64, 68).trim();
@@ -271,11 +280,7 @@ export function parseHY3(text: string): HY3ParseResult {
           g1Buffer = [];
 
           const genderCode = sliceFixed(line, 13, 15).trim();
-          const eventGender =
-            genderCode === 'FFF' ? 'Female' :
-            genderCode === 'MMM' ? 'Male' :
-            genderCode === 'XXX' ? 'Mixed' :
-            undefined;
+          const eventGender = normalizeGenderCode(genderCode);
           const eventCode = sliceFixed(line, 19, 22).trim();
           const eventNum = sliceFixed(line, 40, 42).trim(); // 3 chars: covers 1-pos shift between entry-only vs results files
           const pointsStr = sliceFixed(line, 62, 68).trim();
