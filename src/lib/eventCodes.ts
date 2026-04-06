@@ -38,8 +38,8 @@ export function courseLength(meetCourse: string | null | undefined): number {
 export function relayEventName(hy3Code: string): string {
   const trimmed = hy3Code.toUpperCase().trim()
   const letter = trimmed.slice(-1)
-  const totalDistance = parseInt(trimmed.slice(0, -1))
+  const legDistance = parseInt(trimmed.slice(0, -1))
   const stroke = RELAY_STROKE_MAP[letter]
-  if (stroke && totalDistance) return `4x${totalDistance / 4}m ${stroke} Relay`
+  if (stroke && legDistance) return `4x${legDistance}m ${stroke} Relay`
   return hy3Code
 }
