@@ -328,13 +328,20 @@ export function ProgramContent({ sessions, events, bioMap, breaks = [], entryCou
                         </div>
                         )}
 
+                        {(() => { const isRelayHeat = visibleSwimmers.length > 0 && visibleSwimmers[0].isRelay; return (
                         <table className="w-full">
                           <thead>
                             <tr className="text-gray-700 text-xs font-semibold bg-gray-50 border-b border-gray-200">
                               {heatLaneVisible && <th className="text-center px-3 py-1.5 w-12">Ln</th>}
-                              <th className="text-left px-3 py-1.5">Name</th>
-                              <th className="text-left px-3 py-1.5 w-20 hidden sm:table-cell">Age</th>
-                              <th className="text-left px-3 py-1.5 w-24 hidden sm:table-cell">Club</th>
+                              {isRelayHeat ? (<>
+                                <th className="text-left px-3 py-1.5 w-16">Age</th>
+                                <th className="text-left px-3 py-1.5 w-20">Relay</th>
+                                <th className="text-left px-3 py-1.5">Team</th>
+                              </>) : (<>
+                                <th className="text-left px-3 py-1.5">Name</th>
+                                <th className="text-left px-3 py-1.5 w-20 hidden sm:table-cell">Age</th>
+                                <th className="text-left px-3 py-1.5 w-24 hidden sm:table-cell">Club</th>
+                              </>)}
                               <th className="text-right px-3 py-1.5 w-20">Seed</th>
                             </tr>
                           </thead>
@@ -371,13 +378,9 @@ export function ProgramContent({ sessions, events, bioMap, breaks = [], entryCou
                                       {heatLaneVisible && (
                                         <td className="text-center px-3 py-1.5 font-mono text-xs text-gray-400">{s.lane || ''}</td>
                                       )}
-                                      <td className={`px-3 py-1.5 font-medium text-gray-900 ${s.scratched ? 'line-through text-gray-400' : ''}`} colSpan={heatLaneVisible ? 3 : 2}>
-                                        <span className="inline-flex items-center gap-1.5">
-                                          {s.age && <span className="font-semibold">{s.age}+</span>}
-                                          <span>Relay {s.teamLetter || 'A'}</span>
-                                          <span className="text-gray-500">{s.teamName}</span>
-                                        </span>
-                                      </td>
+                                      <td className={`px-3 py-1.5 font-semibold text-gray-900 ${s.scratched ? 'line-through text-gray-400' : ''}`}>{s.age ? `${s.age}+` : '—'}</td>
+                                      <td className="px-3 py-1.5 text-gray-700">Relay {s.teamLetter || 'A'}</td>
+                                      <td className="px-3 py-1.5 text-gray-500">{s.teamName}</td>
                                       <td className="text-right px-3 py-1.5 font-mono text-xs text-gray-600">
                                         <span className="inline-flex items-center gap-1">
                                           {isOut ? '' : formatSeedTime(s.originalTime)}
@@ -462,6 +465,7 @@ export function ProgramContent({ sessions, events, bioMap, breaks = [], entryCou
                             })}
                           </tbody>
                         </table>
+                        )})()}
                       </div>
                     )})}
                   </EventCard>
