@@ -65,10 +65,11 @@ export default async function ProgramPage() {
   for (const r of relays) {
     const num = parseInt(r.event_number) || 0
     if (!eventMap.has(num)) {
-      eventMap.set(num, { entries: [], eventCode: r.event_code || '', eventGender: '', isRelay: true })
+      eventMap.set(num, { entries: [], eventCode: r.event_code || '', eventGender: r.event_gender || '', isRelay: true })
     }
     const ev = eventMap.get(num)!
     ev.isRelay = true
+    if (!ev.eventGender && r.event_gender) ev.eventGender = r.event_gender
     ev.entries.push({ ...r, isRelay: true, result_heat: r.heat, result_lane: r.lane })
   }
 

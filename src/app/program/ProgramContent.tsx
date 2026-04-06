@@ -373,8 +373,9 @@ export function ProgramContent({ sessions, events, bioMap, breaks = [], entryCou
                                       )}
                                       <td className={`px-3 py-1.5 font-medium text-gray-900 ${s.scratched ? 'line-through text-gray-400' : ''}`} colSpan={heatLaneVisible ? 3 : 2}>
                                         <span className="inline-flex items-center gap-1.5">
-                                          {s.teamName} Relay {s.teamLetter || 'A'}
-                                          {s.age && <span className="text-xs text-gray-500">({s.age}+)</span>}
+                                          {s.age && <span className="font-semibold">{s.age}+</span>}
+                                          <span>Relay {s.teamLetter || 'A'}</span>
+                                          <span className="text-gray-500">{s.teamName}</span>
                                         </span>
                                       </td>
                                       <td className="text-right px-3 py-1.5 font-mono text-xs text-gray-600">
