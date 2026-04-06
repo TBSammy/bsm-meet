@@ -395,7 +395,7 @@ export function ProgramContent({ sessions, events, bioMap, breaks = [], entryCou
                                             <span className="text-gray-400 w-10 shrink-0">Leg {leg.legNumber}</span>
                                             <span className="text-gray-500 w-20 shrink-0">{deriveRelayLegStroke(stroke, leg.legNumber)}</span>
                                             <span className="text-gray-700">{leg.swimmerName}</span>
-                                            <span className="text-gray-400 ml-auto">{leg.age}</span>
+                                            <span className="text-gray-400">{leg.age}</span>
                                           </div>
                                         </td>
                                       </tr>
