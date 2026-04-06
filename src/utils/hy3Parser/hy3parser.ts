@@ -7,6 +7,7 @@
 
 import type {
   HY3ParseResult,
+  HY3FileType,
   HY3Meet,
   HY3Team,
   HY3Swimmer,
@@ -57,6 +58,25 @@ function detectCourseFromName(name: string): 'S' | 'L' | undefined {
   if (upper.includes(' LC ') || upper.includes('LONG COURSE')) return 'L';
   if (upper.includes(' SC ') || upper.includes('SHORT COURSE')) return 'S';
   return undefined;
+}
+
+/** Detect HY3 file type from A1 header line.
+ * A1 pos 3-4: '01' or '02' = entries/nominations, '07' = results.
+ * Falls back to scanning for E2/F2 record types if A1 is ambiguous. */
+export function detectHY3FileType(text: string): HY3FileType {
+  const lines = text.split(/\r?\n/);
+  for (const line of lines) {
+    if (line.startsWith('A1')) {
+      const code = line.substring(2, 4);
+      if (code === '01' || code === '02') return 'entries';
+      if (code === '07') return 'results';
+      break;
+    }
+  }
+  for (const line of lines) {
+    if (line.startsWith('E2') || line.startsWith('F2')) return 'results';
+  }
+  return lines.some(l => l.startsWith('E1') || l.startsWith('F1')) ? 'entries' : 'unknown';
 }
 
 // ── Main Parser ─────────────────────────────────────────────────────────
@@ -280,6 +300,8 @@ export function parseHY3(text: string): HY3ParseResult {
           g1Buffer = [];
 
           const genderCode = sliceFixed(line, 13, 15).trim();
+          const teamLetterRaw = sliceFixed(line, 7, 8).trim();
+          const teamLetter = /^[A-Z]$/i.test(teamLetterRaw) ? teamLetterRaw.toUpperCase() : 'A';
           const eventGender = normalizeGenderCode(genderCode);
           const eventCode = sliceFixed(line, 19, 22).trim();
           const eventNum = sliceFixed(line, 40, 42).trim(); // 3 chars: covers 1-pos shift between entry-only vs results files
@@ -298,6 +320,7 @@ export function parseHY3(text: string): HY3ParseResult {
             event_code: eventCode,
             event_number: eventNum,
             event_gender: eventGender,
+            team_letter: teamLetter,
             event_legs: eventLegs,
             leg_distance: legDistance,
             r_score: sliceFixed(line, 62, 68).trim(),
@@ -469,5 +492,7 @@ export function parseHY3(text: string): HY3ParseResult {
     linesParsed,
   };
 
-  return { meet, teams, warnings, stats };
+  const fileType = detectHY3FileType(text);
+
+  return { meet, teams, warnings, stats, fileType };
 }

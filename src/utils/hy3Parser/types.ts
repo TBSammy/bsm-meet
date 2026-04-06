@@ -112,11 +112,14 @@ export interface HY3Team {
 
 // ── Top-level parse result ─────────────────────────────────────────────
 
+export type HY3FileType = 'entries' | 'results' | 'unknown';
+
 export interface HY3ParseResult {
   meet: HY3Meet;
   teams: HY3Team[];
   warnings: string[];
   stats: HY3ParseStats;
+  fileType: HY3FileType;
 }
 
 // ── Parse statistics ───────────────────────────────────────────────────
