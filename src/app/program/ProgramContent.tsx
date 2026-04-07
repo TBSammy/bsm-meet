@@ -6,7 +6,7 @@ import { useAnnouncer } from '@/components/AnnouncerContext'
 import { EventCard } from './EventCard'
 import { SwimmerBioModal } from './SwimmerBioModal'
 import { formatSeedTime } from '@/lib/utils'
-import { deriveRelayLegStroke } from '@/lib/displayConstants'
+import { deriveRelayLegStroke, buildLaneOrder } from '@/lib/displayConstants'
 
 interface RelayLeg {
   legNumber: number
@@ -86,9 +86,11 @@ interface ProgramContentProps {
   breaks?: BreakDef[]
   entryCountMap?: Record<string, number>
   heatLaneVisible?: boolean
+  laneZeroPosition?: 'first' | 'last'
+  totalLanes?: number
 }
 
-export function ProgramContent({ sessions, events, bioMap, breaks = [], entryCountMap, heatLaneVisible = true }: ProgramContentProps) {
+export function ProgramContent({ sessions, events, bioMap, breaks = [], entryCountMap, heatLaneVisible = true, laneZeroPosition = 'first', totalLanes = 10 }: ProgramContentProps) {
   const { isAnnouncer } = useAnnouncer()
   const [bioModal, setBioModal] = useState<{
     bio: BioProfile
@@ -346,7 +348,9 @@ export function ProgramContent({ sessions, events, bioMap, breaks = [], entryCou
                             </tr>
                           </thead>
                           <tbody>
-                            {visibleSwimmers.map((s) => {
+                            {(() => {
+                              const hasLaneData = heatLaneVisible && visibleSwimmers.some(s => s.lane)
+                              const renderSwimmerRow = (s: typeof visibleSwimmers[number]) => {
                               const isNS = !s.scratched && (s.resultDq === 'R' || (s.resultTime === null && !s.resultDq && ev.isComplete))
                               const isDQ = !s.scratched && s.resultDq === 'Q'
                               const isOut = s.scratched || isNS
@@ -462,7 +466,47 @@ export function ProgramContent({ sessions, events, bioMap, breaks = [], entryCou
                                   </>
                                 </tr>
                               )
-                            })}
+                              }
+
+                              if (!hasLaneData) return visibleSwimmers.map(renderSwimmerRow)
+
+                              const laneOrder = buildLaneOrder(totalLanes, laneZeroPosition)
+                              const swimmerByLane = new Map(visibleSwimmers.filter(s => s.lane).map(s => [parseInt(s.lane), s]))
+
+                              return laneOrder.map(lane => {
+                                const s = swimmerByLane.get(lane)
+                                if (s) return renderSwimmerRow(s)
+
+                                if (isRelayHeat) {
+                                  return (
+                                    <tr key={`empty-${lane}`} className="border-b border-gray-100 text-sm">
+                                      <td className="text-center px-3 py-1.5 font-mono text-xs text-gray-300">{lane}</td>
+                                      <td className="px-3 py-1.5 text-gray-300">{'\u2014'}</td>
+                                      <td className="px-3 py-1.5"></td>
+                                      <td className="px-3 py-1.5"></td>
+                                      <td className="px-3 py-1.5"></td>
+                                    </tr>
+                                  )
+                                }
+
+                                return (
+                                  <tr key={`empty-${lane}`} className="border-b border-gray-100 text-sm">
+                                    <td className="text-center px-3 py-1.5 font-mono text-xs text-gray-300">{lane}</td>
+                                    <td className="px-3 py-1.5 text-gray-300 hidden sm:table-cell">{'\u2014'}</td>
+                                    <td className="px-3 py-1.5 hidden sm:table-cell"></td>
+                                    <td className="px-3 py-1.5 hidden sm:table-cell"></td>
+                                    <td className="px-3 py-1.5 hidden sm:table-cell"></td>
+                                    <td colSpan={3} className="px-3 py-1.5 sm:hidden">
+                                      <div className="flex items-center gap-2 text-gray-300">
+                                        <span className="font-mono text-xs">{lane}</span>
+                                        <span>{'\u2014'}</span>
+                                      </div>
+                                    </td>
+                                    <td className="sm:hidden"></td>
+                                  </tr>
+                                )
+                              })
+                            })()}
                           </tbody>
                         </table>
                         )})()}

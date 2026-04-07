@@ -2,6 +2,7 @@ import { getEntries, getRelays, getBioProfiles, getSessionPlan, getCampaign } fr
 import { eventName, relayEventName } from '@/lib/eventCodes'
 import { ProgramContent } from './ProgramContent'
 import { SESSION_DEFS, computeHeatStartTimes, deriveSessionDefs } from '@/lib/sessions'
+import { laneSortValue } from '@/lib/displayConstants'
 import type { TimingOptions, BreakDef } from '@/lib/sessions'
 
 export const revalidate = 60
@@ -82,6 +83,9 @@ export default async function ProgramPage() {
   ]
   const heatStartTimes = computeHeatStartTimes(allFlatEntries, timingOptions)
 
+  const laneZeroPos: 'first' | 'last' = (campaign as any)?.lane_zero_position || 'first'
+  const totalLanes: number = (campaign as any)?.total_lanes ?? 10
+
   // Transform into serializable data for client component
   const processedEvents = sortedEvents.map(([eventNum, eventData]) => {
     const displayName = eventData.isRelay
@@ -113,7 +117,7 @@ export default async function ProgramPage() {
       swimmers: swimmers.sort((a: any, b: any) => {
         const aLane = parseInt(a.result_lane) || 0;
         const bLane = parseInt(b.result_lane) || 0;
-        if (aLane || bLane) return (aLane || 99) - (bLane || 99);
+        if (aLane || bLane) return laneSortValue(a.result_lane, laneZeroPos) - laneSortValue(b.result_lane, laneZeroPos);
         const aTime = a.original_time ?? a.seed_time ?? Infinity;
         const bTime = b.original_time ?? b.seed_time ?? Infinity;
         if (aTime !== bTime) return aTime - bTime;
@@ -197,6 +201,8 @@ export default async function ProgramPage() {
         breaks={breakDefs}
         entryCountMap={entryCountRecord}
         heatLaneVisible={!!campaign?.heat_lane_visible}
+        laneZeroPosition={laneZeroPos}
+        totalLanes={totalLanes}
       />
     </div>
   )

@@ -41,6 +41,22 @@ export function deriveRelayLegStroke(eventStroke: string | undefined, legNumber:
   return eventStroke;
 }
 
+// Lane 0 sort helper — respects campaign-level lane_zero_position setting
+export function laneSortValue(lane: string | null | undefined, laneZeroPos: 'first' | 'last' = 'first'): number {
+  const n = parseInt(lane || '0') || 0;
+  if (n === 0) return laneZeroPos === 'first' ? -1 : 999;
+  return n;
+}
+
+// Build ordered lane list for empty-lane grid rendering
+export function buildLaneOrder(totalLanes: number, laneZeroPos: 'first' | 'last'): number[] {
+  const lanes = Array.from({ length: totalLanes }, (_, i) => i);
+  if (laneZeroPos === 'last') {
+    lanes.push(lanes.shift()!);
+  }
+  return lanes;
+}
+
 export const BADGE_LEGEND = {
   EXH: 'Exhibition',
   IN:  'Checked In',
