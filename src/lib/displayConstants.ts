@@ -42,14 +42,18 @@ export function deriveRelayLegStroke(eventStroke: string | undefined, legNumber:
 }
 
 // Lane 0 sort helper — respects campaign-level lane_zero_position setting
-export function laneSortValue(lane: string | null | undefined, laneZeroPos: 'first' | 'last' = 'first'): number {
+export function laneSortValue(lane: string | null | undefined, laneZeroPos: 'first' | 'last' | 'none' = 'first'): number {
   const n = parseInt(lane || '0') || 0;
   if (n === 0) return laneZeroPos === 'first' ? -1 : 999;
   return n;
 }
 
 // Build ordered lane list for empty-lane grid rendering
-export function buildLaneOrder(totalLanes: number, laneZeroPos: 'first' | 'last'): number[] {
+export function buildLaneOrder(totalLanes: number, laneZeroPos: 'first' | 'last' | 'none'): number[] {
+  if (laneZeroPos === 'none') {
+    // No lane 0: [1, 2, 3, ..., N-1]
+    return Array.from({ length: totalLanes - 1 }, (_, i) => i + 1);
+  }
   const lanes = Array.from({ length: totalLanes }, (_, i) => i);
   if (laneZeroPos === 'last') {
     lanes.push(lanes.shift()!);
