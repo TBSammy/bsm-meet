@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { formatTime } from '@/lib/utils'
 import { courseLength as getCourseLength } from '@/lib/eventCodes'
-import { BADGE, PLACE_COLOR, NT_TIME_COLOR, ordinal } from '@/lib/displayConstants'
+import { BADGE, PLACE_COLOR, NT_TIME_COLOR, ordinal, sexPrefix } from '@/lib/displayConstants'
 import { X, Search, ChevronDown, ChevronRight, Users } from 'lucide-react'
 
 /** Determine swim status from result fields — mirrors MC getSwimStatus() */
@@ -427,7 +427,7 @@ export function ResultsClient({ events, meetCourse, pointsVisible }: { events: [
                         <button
                           onClick={(e) => {
                             e.stopPropagation()
-                            setShowSplits({ name: swimmerName, event: `Event ${eventNum} \u2014 ${ev.name}`, splits: r.splits, resultTime: r.result_time })
+                            setShowSplits({ name: swimmerName, event: `Event ${eventNum} \u2014 ${sexPrefix(ev.eventGender)}${ev.name}`, splits: r.splits, resultTime: r.result_time })
                           }}
                           className="text-blue-600 underline decoration-dotted cursor-pointer font-semibold hover:text-blue-800"
                         >
@@ -526,7 +526,7 @@ export function ResultsClient({ events, meetCourse, pointsVisible }: { events: [
                 onClick={() => toggleEvent(eventNum)}
                 className="w-full bg-navy-50 px-4 py-2.5 border-b border-navy-100 flex items-center justify-between hover:bg-navy-100 transition-colors cursor-pointer text-left"
               >
-                <h3 className="font-bold text-navy-900">Event {eventNum} - {ev.name}</h3>
+                <h3 className="font-bold text-navy-900">Event {eventNum} - {sexPrefix(ev.eventGender)}{ev.name}</h3>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-navy-400">{ev.results.length} result{ev.results.length !== 1 ? 's' : ''}</span>
                   {isCollapsed ? <ChevronRight size={18} className="text-navy-400" /> : <ChevronDown size={18} className="text-navy-400" />}
