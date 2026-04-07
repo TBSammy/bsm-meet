@@ -450,5 +450,5 @@ export function parseCL2(text: string): HY3ParseResult {
     linesParsed,
   };
 
-  return { meet, teams, warnings, stats };
+  return { meet, teams, warnings, stats, fileType: 'unknown' as const };
 }

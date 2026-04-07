@@ -110,7 +110,21 @@ export default async function ProgramPage() {
       estTime: heatStartTimes.get(`${eventNum}-${heatNum}`)?.live,
       scheduledTime: heatStartTimes.get(`${eventNum}-${heatNum}`)?.scheduled,
       deltaMinutes: heatStartTimes.get(`${eventNum}-${heatNum}`)?.deltaMinutes || 0,
-      swimmers: swimmers.sort((a: any, b: any) => (parseInt(a.result_lane) || 0) - (parseInt(b.result_lane) || 0)).map((s: any, i: number) => ({
+      swimmers: swimmers.sort((a: any, b: any) => {
+        const aLane = parseInt(a.result_lane) || 0;
+        const bLane = parseInt(b.result_lane) || 0;
+        if (aLane || bLane) return (aLane || 99) - (bLane || 99);
+        const aTime = a.original_time ?? a.seed_time ?? Infinity;
+        const bTime = b.original_time ?? b.seed_time ?? Infinity;
+        if (aTime !== bTime) return aTime - bTime;
+        if (a.isRelay && b.isRelay) {
+          const aAge = parseInt(a.age || '') || 0;
+          const bAge = parseInt(b.age || '') || 0;
+          if (aAge !== bAge) return aAge - bAge;
+          return (a.team_letter || 'A').localeCompare(b.team_letter || 'A');
+        }
+        return 0;
+      }).map((s: any, i: number) => ({
         key: `${eventNum}-${heatNum}-${i}`,
         lane: s.result_lane || '',
         isRelay: !!s.isRelay,
