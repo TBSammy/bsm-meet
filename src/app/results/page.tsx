@@ -95,21 +95,20 @@ export default async function ResultsPage() {
   }
 
   // Sort results within each event:
-  // Mixed events: women first → age group asc → placing asc
-  // Non-mixed: age group asc → placing asc
+  // Age group asc → gender F first (mixed only) → DQ/NS last → placing asc
   for (const ev of eventMap.values()) {
     const isMixed = ev.eventGender === 'Mixed'
     ev.results.sort((a: any, b: any) => {
-      // Gender sort for mixed individual events only (F/W first)
+      // Age group ascending
+      const ageA = ageGroupNum(a.swimmer?.age_group)
+      const ageB = ageGroupNum(b.swimmer?.age_group)
+      if (ageA !== ageB) return ageA - ageB
+      // Gender sort for mixed individual events only (F/W first) within same age group
       if (isMixed && !a.isRelay && !b.isRelay) {
         const gA = a.swimmer?.gender === 'F' ? 0 : 1
         const gB = b.swimmer?.gender === 'F' ? 0 : 1
         if (gA !== gB) return gA - gB
       }
-      // Age group ascending
-      const ageA = ageGroupNum(a.swimmer?.age_group)
-      const ageB = ageGroupNum(b.swimmer?.age_group)
-      if (ageA !== ageB) return ageA - ageB
       // DQ/NS sort after placed swimmers
       const dqA = a.result_dq ? 1 : 0
       const dqB = b.result_dq ? 1 : 0
