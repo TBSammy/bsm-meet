@@ -9,6 +9,7 @@ export function Header({ entriesClosed, resultsLive, programLive }: { entriesClo
     { href: '/', label: 'Home' },
     ...(programLive ? [{ href: '/program', label: 'Program' }] : []),
     ...(entriesClosed ? [{ href: '/entries', label: 'Entry List' }] : []),
+    ...(entriesClosed ? [{ href: '/competitors', label: 'Competitors' }] : []),
     ...(resultsLive ? [{ href: '/results', label: 'Results' }] : []),
     { href: '/venue', label: 'Venue' },
     { href: '/portal', label: 'Swimmer Portal' },
