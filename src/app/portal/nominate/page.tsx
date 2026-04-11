@@ -152,6 +152,7 @@ export default function NominatePage() {
   const [remainingSlots, setRemainingSlots] = useState<number | null>(null)
   const [sessionPlan, setSessionPlan] = useState<any>(null)
   const [cancellingId, setCancellingId] = useState<string | null>(null)
+  const [pricing, setPricing] = useState<{ individualFeeCents: number; lateFeeCents: number; lateFeeDate: string | null } | null>(null)
 
   useEffect(() => {
     const token = localStorage.getItem('bsm_session')
@@ -172,6 +173,7 @@ export default function NominatePage() {
         setCurrentEventCount(data.currentEventCount ?? 0)
         setRemainingSlots(data.remainingSlots ?? null)
         setSessionPlan(data.sessionPlan ?? null)
+        setPricing(data.pricing ?? null)
       })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false))
@@ -359,6 +361,20 @@ export default function NominatePage() {
                   : <>You can nominate for <strong>{remainingSlots - selectedEvents.size}</strong> more event{remainingSlots - selectedEvents.size !== 1 ? 's' : ''} ({currentEventCount + selectedEvents.size} of {maxIndividualEvents} maximum)</>
                 }
               </span>
+            </div>
+          )}
+
+          {/* Pricing info */}
+          {pricing && (
+            <div className="mb-4 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm flex items-start gap-2">
+              <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
+              <div>
+                <strong>Entry fee applies:</strong> ${(pricing.individualFeeCents / 100).toFixed(2)} per event
+                {pricing.lateFeeCents > 0 && pricing.lateFeeDate && (
+                  <span> (+ ${(pricing.lateFeeCents / 100).toFixed(2)} late fee after {new Date(pricing.lateFeeDate).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })})</span>
+                )}
+                . Payment link will be sent on approval.
+              </div>
             </div>
           )}
 
