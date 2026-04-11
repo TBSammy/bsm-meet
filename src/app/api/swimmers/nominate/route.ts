@@ -19,9 +19,9 @@ export async function GET(req: NextRequest) {
 
   const memberId = session.swimmer.member_id
 
-  // Check if waitlist is enabled
+  // Check if waitlist is enabled + get limits + session plan
   const { data: campaign } = await nt.from('nt_campaigns')
-    .select('waitlist_enabled, total_lanes, lane_zero_position')
+    .select('waitlist_enabled, total_lanes, lane_zero_position, max_individual_events, max_events_per_day, session_plan')
     .eq('id', CAMPAIGN_ID)
     .single()
 
@@ -32,28 +32,38 @@ export async function GET(req: NextRequest) {
   // Fetch entries, swimmer's entries, and existing nominations in parallel
   const [{ data: allEntries }, { data: myEntries }, { data: myNominations }] = await Promise.all([
     nt.from('nt_entries')
-      .select('event_code, event_gender, scratched')
+      .select('event_code, event_gender, event_number, scratched')
       .eq('campaign_id', CAMPAIGN_ID),
     nt.from('nt_entries')
       .select('event_code, event_gender')
       .eq('campaign_id', CAMPAIGN_ID)
       .eq('member_id', memberId)
-      .is('scratched', null),
+      .or('scratched.is.null,scratched.eq.false'),
     nt.from('nt_waitlist_items')
       .select('*')
       .eq('campaign_id', CAMPAIGN_ID)
       .eq('member_id', memberId),
   ])
 
+  // Calculate current event count (entries + pending/approved nominations)
+  const pendingApprovedNoms = (myNominations || []).filter(
+    (n: any) => n.status === 'pending' || n.status === 'approved'
+  )
+  const currentEventCount = (myEntries || []).length + pendingApprovedNoms.length
+  const maxIndividualEvents = campaign.max_individual_events ?? null
+  const remainingSlots = maxIndividualEvents !== null
+    ? Math.max(0, maxIndividualEvents - currentEventCount)
+    : null
+
   // Calculate available spots per event
   const effectiveLanes = campaign.total_lanes - (campaign.lane_zero_position === 'none' ? 1 : 0)
-  const eventMap = new Map<string, { eventCode: string; eventGender: string | null; count: number }>()
+  const eventMap = new Map<string, { eventCode: string; eventGender: string | null; eventNumber: string | null; count: number }>()
 
   for (const entry of (allEntries || [])) {
     if (entry.scratched) continue
     const key = `${entry.event_code}|${entry.event_gender || ''}`
     if (!eventMap.has(key)) {
-      eventMap.set(key, { eventCode: entry.event_code, eventGender: entry.event_gender, count: 0 })
+      eventMap.set(key, { eventCode: entry.event_code, eventGender: entry.event_gender, eventNumber: entry.event_number || null, count: 0 })
     }
     eventMap.get(key)!.count++
   }
@@ -61,9 +71,7 @@ export async function GET(req: NextRequest) {
   // Exclude events the swimmer is already in or has a pending/approved nomination for
   const myEntryKeys = new Set((myEntries || []).map((e: any) => `${e.event_code}|${e.event_gender || ''}`))
   const myNomKeys = new Set(
-    (myNominations || [])
-      .filter((n: any) => n.status === 'pending' || n.status === 'approved')
-      .map((n: any) => `${n.event_code}|${n.event_gender || ''}`)
+    pendingApprovedNoms.map((n: any) => `${n.event_code}|${n.event_gender || ''}`)
   )
 
   const events = []
@@ -75,6 +83,7 @@ export async function GET(req: NextRequest) {
       events.push({
         eventCode: info.eventCode,
         eventGender: info.eventGender,
+        eventNumber: info.eventNumber,
         entered: info.count,
         available,
       })
@@ -92,15 +101,45 @@ export async function GET(req: NextRequest) {
       club_code: session.swimmer.club_code,
       club_name: session.swimmer.club_name,
     },
+    maxIndividualEvents,
+    currentEventCount,
+    remainingSlots,
+    sessionPlan: campaign.session_plan || null,
   })
 }
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  const { token, event_code, event_gender, seed_time, notes } = body
+  const { token } = body
 
   if (!token) return NextResponse.json({ error: 'Token required' }, { status: 401 })
-  if (!event_code) return NextResponse.json({ error: 'Event code required' }, { status: 400 })
+
+  // Support both single and batch format
+  let nominations: Array<{ event_code: string; event_gender: string | null; seed_time: number | null; notes: string | null }>
+  if (body.nominations && Array.isArray(body.nominations)) {
+    nominations = body.nominations
+  } else if (body.event_code) {
+    nominations = [{
+      event_code: body.event_code,
+      event_gender: body.event_gender ?? null,
+      seed_time: body.seed_time ?? null,
+      notes: body.notes ?? null,
+    }]
+  } else {
+    return NextResponse.json({ error: 'No nominations provided' }, { status: 400 })
+  }
+
+  if (nominations.length === 0) {
+    return NextResponse.json({ error: 'No nominations provided' }, { status: 400 })
+  }
+
+  // Validate seed time is provided for each
+  for (const nom of nominations) {
+    if (!nom.event_code) return NextResponse.json({ error: 'Event code required' }, { status: 400 })
+    if (nom.seed_time === null || nom.seed_time === undefined || nom.seed_time <= 0) {
+      return NextResponse.json({ error: `Seed time is required for event ${nom.event_code}` }, { status: 400 })
+    }
+  }
 
   const sb = createServerClient()
   const nt = ntDemo(sb)
@@ -115,30 +154,63 @@ export async function POST(req: NextRequest) {
 
   const swimmer = session.swimmer
 
-  // Check not already entered
-  const { data: existing } = await nt.from('nt_entries')
-    .select('id')
-    .eq('campaign_id', CAMPAIGN_ID)
-    .eq('member_id', swimmer.member_id)
-    .eq('event_code', event_code)
-    .is('scratched', null)
-    .limit(1)
+  // Check max individual events limit
+  const { data: campaign } = await nt.from('nt_campaigns')
+    .select('max_individual_events')
+    .eq('id', CAMPAIGN_ID)
+    .single()
 
-  if (existing && existing.length > 0) {
-    return NextResponse.json({ error: 'Already entered in this event' }, { status: 409 })
+  if (campaign?.max_individual_events !== null && campaign?.max_individual_events !== undefined) {
+    const [{ data: existingEntries }, { data: existingNoms }] = await Promise.all([
+      nt.from('nt_entries')
+        .select('id')
+        .eq('campaign_id', CAMPAIGN_ID)
+        .eq('member_id', swimmer.member_id)
+        .or('scratched.is.null,scratched.eq.false'),
+      nt.from('nt_waitlist_items')
+        .select('id')
+        .eq('campaign_id', CAMPAIGN_ID)
+        .eq('member_id', swimmer.member_id)
+        .in('status', ['pending', 'approved']),
+    ])
+
+    const currentCount = (existingEntries?.length || 0) + (existingNoms?.length || 0)
+    const remaining = campaign.max_individual_events - currentCount
+
+    if (nominations.length > remaining) {
+      return NextResponse.json({
+        error: remaining <= 0
+          ? `You have reached the maximum of ${campaign.max_individual_events} individual events`
+          : `You can only nominate for ${remaining} more event${remaining === 1 ? '' : 's'} (maximum ${campaign.max_individual_events})`
+      }, { status: 400 })
+    }
   }
 
-  // Check not already nominated (pending/approved)
-  const { data: existingNom } = await nt.from('nt_waitlist_items')
-    .select('id')
-    .eq('campaign_id', CAMPAIGN_ID)
-    .eq('member_id', swimmer.member_id)
-    .eq('event_code', event_code)
-    .in('status', ['pending', 'approved'])
-    .limit(1)
+  // Validate each nomination (not already entered, not already nominated)
+  for (const nom of nominations) {
+    const { data: existing } = await nt.from('nt_entries')
+      .select('id')
+      .eq('campaign_id', CAMPAIGN_ID)
+      .eq('member_id', swimmer.member_id)
+      .eq('event_code', nom.event_code)
+      .is('scratched', null)
+      .limit(1)
 
-  if (existingNom && existingNom.length > 0) {
-    return NextResponse.json({ error: 'Already nominated for this event' }, { status: 409 })
+    if (existing && existing.length > 0) {
+      return NextResponse.json({ error: `Already entered in event ${nom.event_code}` }, { status: 409 })
+    }
+
+    const { data: existingNom } = await nt.from('nt_waitlist_items')
+      .select('id')
+      .eq('campaign_id', CAMPAIGN_ID)
+      .eq('member_id', swimmer.member_id)
+      .eq('event_code', nom.event_code)
+      .in('status', ['pending', 'approved'])
+      .limit(1)
+
+    if (existingNom && existingNom.length > 0) {
+      return NextResponse.json({ error: `Already nominated for event ${nom.event_code}` }, { status: 409 })
+    }
   }
 
   // Get max queue position
@@ -148,29 +220,76 @@ export async function POST(req: NextRequest) {
     .order('queue_position', { ascending: false })
     .limit(1)
 
-  const queuePos = ((maxQ?.[0]?.queue_position) ?? 0) + 1
+  let queuePos = ((maxQ?.[0]?.queue_position) ?? 0) + 1
 
-  // Insert nomination
-  const { data: item, error: insertErr } = await nt.from('nt_waitlist_items')
-    .insert({
-      campaign_id: CAMPAIGN_ID,
-      member_id: swimmer.member_id,
-      swimmer_name: `${swimmer.given_name} ${swimmer.surname}`,
-      club_code: swimmer.club_code || null,
-      club_name: swimmer.club_name || null,
-      event_code,
-      event_gender: event_gender || null,
-      seed_time: seed_time || null,
-      status: 'pending',
-      email: null,
-      notes: notes || null,
-      queue_position: queuePos,
-      source: 'portal',
-    })
-    .select()
+  // Insert all nominations
+  const items = []
+  for (const nom of nominations) {
+    const { data: item, error: insertErr } = await nt.from('nt_waitlist_items')
+      .insert({
+        campaign_id: CAMPAIGN_ID,
+        member_id: swimmer.member_id,
+        swimmer_name: `${swimmer.given_name} ${swimmer.surname}`,
+        club_code: swimmer.club_code || null,
+        club_name: swimmer.club_name || null,
+        event_code: nom.event_code,
+        event_gender: nom.event_gender || null,
+        seed_time: nom.seed_time,
+        status: 'pending',
+        email: null,
+        notes: nom.notes || null,
+        queue_position: queuePos,
+        source: 'portal',
+      })
+      .select()
+      .single()
+
+    if (insertErr) return NextResponse.json({ error: insertErr.message }, { status: 500 })
+    items.push(item)
+    queuePos++
+  }
+
+  return NextResponse.json({ items })
+}
+
+export async function DELETE(req: NextRequest) {
+  const body = await req.json()
+  const { token, nomination_id } = body
+
+  if (!token) return NextResponse.json({ error: 'Token required' }, { status: 401 })
+  if (!nomination_id) return NextResponse.json({ error: 'Nomination ID required' }, { status: 400 })
+
+  const sb = createServerClient()
+  const nt = ntDemo(sb)
+
+  // Validate session
+  const { data: session } = await nt.from('portal_sessions')
+    .select('*, swimmer:nt_swimmers(*)')
+    .eq('token', token)
     .single()
 
-  if (insertErr) return NextResponse.json({ error: insertErr.message }, { status: 500 })
+  if (!session?.swimmer) return NextResponse.json({ error: 'Invalid session' }, { status: 401 })
 
-  return NextResponse.json({ item })
+  // Fetch the nomination and verify ownership + status
+  const { data: nomination } = await nt.from('nt_waitlist_items')
+    .select('id, member_id, status')
+    .eq('id', nomination_id)
+    .eq('campaign_id', CAMPAIGN_ID)
+    .single()
+
+  if (!nomination) return NextResponse.json({ error: 'Nomination not found' }, { status: 404 })
+  if (nomination.member_id !== session.swimmer.member_id) {
+    return NextResponse.json({ error: 'Not your nomination' }, { status: 403 })
+  }
+  if (nomination.status !== 'pending') {
+    return NextResponse.json({ error: 'Only pending nominations can be cancelled' }, { status: 400 })
+  }
+
+  const { error: deleteErr } = await nt.from('nt_waitlist_items')
+    .delete()
+    .eq('id', nomination_id)
+
+  if (deleteErr) return NextResponse.json({ error: deleteErr.message }, { status: 500 })
+
+  return NextResponse.json({ success: true })
 }

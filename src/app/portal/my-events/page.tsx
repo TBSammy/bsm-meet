@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { ArrowLeft, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, AlertTriangle, Hand, Clock, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { formatSeedTime } from '@/lib/utils'
 import { eventName } from '@/lib/eventCodes'
@@ -16,17 +16,20 @@ interface CampaignSettings {
 export default function MyEventsPage() {
   const [swimmer, setSwimmer] = useState<any>(null)
   const [entries, setEntries] = useState<any[]>([])
+  const [nominations, setNominations] = useState<any[]>([])
   const [settings, setSettings] = useState<CampaignSettings | null>(null)
   const [loading, setLoading] = useState(true)
   const [token, setToken] = useState<string | null>(null)
   const [scratchConfirm, setScratchConfirm] = useState<{ entry: any; action: 'scratch' | 'unscratch' } | null>(null)
   const [scratchReason, setScratchReason] = useState('')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [cancellingId, setCancellingId] = useState<string | null>(null)
 
   const loadEntries = useCallback(async (memberId: string) => {
     const res = await fetch(`/api/swimmers/entries?member_id=${memberId}`)
     const data = await res.json()
     setEntries(data.entries || [])
+    setNominations(data.nominations || [])
     if (data.settings) setSettings(data.settings)
   }, [])
 
@@ -72,6 +75,25 @@ export default function MyEventsPage() {
       setActionLoading(null)
       setScratchConfirm(null)
       setScratchReason('')
+    }
+  }
+
+  const handleCancelNomination = async (nominationId: string) => {
+    if (!token) return
+    setCancellingId(nominationId)
+    try {
+      const res = await fetch('/api/swimmers/nominate', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, nomination_id: nominationId }),
+      })
+      const data = await res.json()
+      if (!res.ok) { alert(data.error || 'Failed to cancel'); return }
+      setNominations(prev => prev.filter(n => n.id !== nominationId))
+    } catch {
+      alert('Network error - please try again')
+    } finally {
+      setCancellingId(null)
     }
   }
 
@@ -171,6 +193,52 @@ export default function MyEventsPage() {
           </div>
         ))}
       </div>
+
+      {/* Nominated events */}
+      {nominations.length > 0 && (
+        <div className="mt-8">
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
+            <Hand className="h-4 w-4" /> Nominated Events
+          </h2>
+          <div className="space-y-3">
+            {nominations.map((nom: any) => (
+              <div key={nom.id} className="bg-white border border-bsm-200 rounded-xl p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-dark-900">{eventName(nom.event_code)}</p>
+                    <p className="text-sm text-dark-500">
+                      Seed: {nom.seed_time ? formatSeedTime(nom.seed_time) : '-'}
+                      {nom.notes && <span className="ml-2 text-gray-400">- {nom.notes}</span>}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 ml-3 shrink-0">
+                    {nom.status === 'pending' && (
+                      <span className="flex items-center gap-1 text-xs px-2.5 py-1 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-full">
+                        <Clock className="h-3 w-3" /> Pending Review
+                      </span>
+                    )}
+                    {nom.status === 'approved' && (
+                      <span className="text-xs px-2.5 py-1 bg-green-50 text-green-700 border border-green-200 rounded-full">Approved</span>
+                    )}
+                    {nom.status === 'declined' && (
+                      <span className="text-xs px-2.5 py-1 bg-red-50 text-red-700 border border-red-200 rounded-full">Declined</span>
+                    )}
+                    {nom.status === 'pending' && (
+                      <button
+                        onClick={() => handleCancelNomination(nom.id)}
+                        disabled={cancellingId === nom.id}
+                        className="text-xs px-2 py-1 text-red-600 hover:bg-red-50 border border-red-200 rounded-lg disabled:opacity-50"
+                      >
+                        {cancellingId === nom.id ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Cancel'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Scratched entries */}
       {scratchedEntries.length > 0 && (

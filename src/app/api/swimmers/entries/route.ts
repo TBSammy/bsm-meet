@@ -11,8 +11,8 @@ export async function GET(req: NextRequest) {
 
   const sb = createServerClient()
 
-  // Fetch swimmer's entries, all entries (for timing), session plan, and campaign settings
-  const [{ data: myEntries }, { data: allEntries }, sessionPlan, { data: campaign }] = await Promise.all([
+  // Fetch swimmer's entries, all entries (for timing), session plan, campaign settings, and nominations
+  const [{ data: myEntries }, { data: allEntries }, sessionPlan, { data: campaign }, { data: myNominations }] = await Promise.all([
     ntDemo(sb).from('nt_entries')
       .select('*').eq('campaign_id', CAMPAIGN_ID).eq('member_id', memberId),
     ntDemo(sb).from('nt_entries')
@@ -22,6 +22,11 @@ export async function GET(req: NextRequest) {
     ntDemo(sb).from('nt_campaigns')
       .select('self_scratch_enabled,self_scratch_cutoff_min,check_in_enabled,check_in_cutoff_min')
       .eq('id', CAMPAIGN_ID).single(),
+    ntDemo(sb).from('nt_waitlist_items')
+      .select('id,event_code,event_gender,seed_time,status,notes,created_at')
+      .eq('campaign_id', CAMPAIGN_ID)
+      .eq('member_id', memberId)
+      .in('status', ['pending', 'approved', 'declined']),
   ])
 
   // Build timing options from session plan
@@ -57,6 +62,7 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     entries: sorted,
+    nominations: myNominations || [],
     settings: {
       self_scratch_enabled: campaign?.self_scratch_enabled ?? false,
       self_scratch_cutoff_min: campaign?.self_scratch_cutoff_min ?? 30,
