@@ -209,7 +209,6 @@ export default function NominatePage() {
                       <div className="flex justify-between items-center">
                         <div>
                           <span className="font-medium text-gray-900">{sexPrefix(evt.eventGender)}{eventName(evt.eventCode)}</span>
-                          <span className="text-xs text-gray-400 ml-2">{evt.eventCode}</span>
                         </div>
                         <div className="text-right">
                           <span className="text-xs text-gray-500">{evt.entered} entered</span>
