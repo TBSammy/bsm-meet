@@ -81,12 +81,17 @@ export function relayEventName(hy3Code: string): string {
     const legDist = existing.distance / 4;
     return `4x${legDist}m ${existing.stroke} Relay`;
   }
-  // Otherwise, interpret as per-leg relay code: distance + stroke letter
+  // Smart detection: HY3 files encode relay codes as either total distance (200A = 4x50m)
+  // or per-leg distance (50A = 4x50m) depending on Meet Manager version.
+  // If num/4 is a standard leg distance, treat as total; otherwise num IS the leg distance.
   const trimmed = hy3Code.toUpperCase().trim();
   const letter = trimmed.slice(-1);
-  const legDistance = parseInt(trimmed.slice(0, -1));
+  const num = parseInt(trimmed.slice(0, -1));
   const stroke = RELAY_STROKE_MAP[letter];
-  if (stroke && legDistance) {
+  if (stroke && num) {
+    const STANDARD_LEGS = new Set([25, 50, 100, 200]);
+    const divided = num / 4;
+    const legDistance = STANDARD_LEGS.has(divided) ? divided : num;
     return `4x${legDistance}m ${stroke} Relay`;
   }
   return hy3Code;
