@@ -293,6 +293,9 @@ export async function POST(req: NextRequest) {
 
   let queuePos = ((maxQ?.[0]?.queue_position) ?? 0) + 1
 
+  // Generate a shared group ID for all items in this submission
+  const submissionGroup = crypto.randomUUID()
+
   // Insert all nominations
   const items = []
   for (const nom of nominations) {
@@ -311,6 +314,7 @@ export async function POST(req: NextRequest) {
         notes: nom.notes || null,
         queue_position: queuePos,
         source: 'portal',
+        submission_group: submissionGroup,
       })
       .select()
       .single()
