@@ -19,9 +19,9 @@ export async function GET(req: NextRequest) {
 
   const memberId = session.swimmer.member_id
 
-  // Check if waitlist is enabled + get limits + session plan
+  // Check if waitlist is enabled + get limits + session plan + pricing
   const { data: campaign } = await nt.from('nt_campaigns')
-    .select('waitlist_enabled, total_lanes, lane_zero_position, max_individual_events, max_events_per_day, session_plan')
+    .select('waitlist_enabled, total_lanes, lane_zero_position, max_individual_events, max_events_per_day, session_plan, waitlist_cost_enabled, waitlist_individual_fee_cents, waitlist_relay_fee_cents, waitlist_late_fee_cents, waitlist_late_fee_date')
     .eq('id', CAMPAIGN_ID)
     .single()
 
@@ -29,8 +29,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ enabled: false, events: [], myNominations: [] })
   }
 
-  // Fetch entries, swimmer's entries, and existing nominations in parallel
-  const [{ data: allEntries }, { data: myEntries }, { data: myNominations }] = await Promise.all([
+  // Fetch entries, swimmer's entries, existing nominations, and all pending/approved nominations
+  const [{ data: allEntries }, { data: myEntries }, { data: myNominations }, { data: allPendingNoms }] = await Promise.all([
     nt.from('nt_entries')
       .select('event_code, event_gender, event_number, scratched')
       .eq('campaign_id', CAMPAIGN_ID),
@@ -43,6 +43,10 @@ export async function GET(req: NextRequest) {
       .select('*')
       .eq('campaign_id', CAMPAIGN_ID)
       .eq('member_id', memberId),
+    nt.from('nt_waitlist_items')
+      .select('event_code, event_gender')
+      .eq('campaign_id', CAMPAIGN_ID)
+      .in('status', ['pending', 'approved']),
   ])
 
   // Calculate current event count (entries + pending/approved nominations)
@@ -66,6 +70,13 @@ export async function GET(req: NextRequest) {
       eventMap.set(key, { eventCode: entry.event_code, eventGender: entry.event_gender, eventNumber: entry.event_number || null, count: 0 })
     }
     eventMap.get(key)!.count++
+  }
+
+  // Count all pending/approved nominations as soft entries
+  for (const nom of (allPendingNoms || [])) {
+    const key = `${nom.event_code}|${nom.event_gender || ''}`
+    const existing = eventMap.get(key)
+    if (existing) existing.count++
   }
 
   // Exclude events the swimmer is already in or has a pending/approved nomination for
@@ -105,6 +116,12 @@ export async function GET(req: NextRequest) {
     currentEventCount,
     remainingSlots,
     sessionPlan: campaign.session_plan || null,
+    pricing: campaign.waitlist_cost_enabled ? {
+      individualFeeCents: campaign.waitlist_individual_fee_cents ?? 0,
+      relayFeeCents: campaign.waitlist_relay_fee_cents ?? 0,
+      lateFeeCents: campaign.waitlist_late_fee_cents ?? 0,
+      lateFeeDate: campaign.waitlist_late_fee_date ?? null,
+    } : null,
   })
 }
 
