@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Waves, Mail, ArrowRight, CheckCircle, User, UserPlus, Smartphone, Search } from 'lucide-react'
+import { Waves, Mail, ArrowRight, CheckCircle, User, UserPlus, Smartphone, Search, Hand } from 'lucide-react'
 import Link from 'next/link'
 
 type Step = 'init' | 'lookup' | 'register' | 'choose_method' | 'verify' | 'authenticated'
@@ -213,6 +213,11 @@ export default function PortalPage() {
             <Waves className="h-8 w-8 text-bsm-600 mb-3" />
             <h3 className="font-bold text-dark-900 group-hover:text-bsm-700">Swimmer Bio</h3>
             <p className="text-sm text-dark-500">Share your story for the announcer</p>
+          </Link>
+          <Link href="/portal/nominate" className="bg-white border border-dark-100 rounded-xl p-6 hover:shadow-lg transition-shadow group sm:col-span-2">
+            <Hand className="h-8 w-8 text-bsm-600 mb-3" />
+            <h3 className="font-bold text-dark-900 group-hover:text-bsm-700">Nominate for Events</h3>
+            <p className="text-sm text-dark-500">Request a spot in events with available lanes</p>
           </Link>
         </div>
         <button
