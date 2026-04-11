@@ -85,12 +85,25 @@ export async function GET(req: NextRequest) {
     pendingApprovedNoms.map((n: any) => `${n.event_code}|${n.event_gender || ''}`)
   )
 
+  // Filter events by swimmer gender (M -> Male + Mixed, F -> Female + Mixed)
+  const swimmerGender = session.swimmer.gender as string | null
+  function matchesGender(eventGender: string | null): boolean {
+    if (!eventGender || eventGender === 'Mixed') return true
+    if (!swimmerGender) return true
+    const g = swimmerGender.toLowerCase()
+    const isMale = g === 'm' || g === 'male'
+    const isFemale = g === 'f' || g === 'female'
+    if (isMale && eventGender === 'Male') return true
+    if (isFemale && eventGender === 'Female') return true
+    return false
+  }
+
   const events = []
   for (const [key, info] of eventMap) {
     const heats = Math.ceil(info.count / effectiveLanes)
     const totalSlots = heats * effectiveLanes
     const available = totalSlots - info.count
-    if (available > 0 && !myEntryKeys.has(key) && !myNomKeys.has(key)) {
+    if (available > 0 && !myEntryKeys.has(key) && !myNomKeys.has(key) && matchesGender(info.eventGender)) {
       events.push({
         eventCode: info.eventCode,
         eventGender: info.eventGender,
@@ -109,6 +122,7 @@ export async function GET(req: NextRequest) {
       given_name: session.swimmer.given_name,
       surname: session.swimmer.surname,
       member_id: memberId,
+      gender: swimmerGender,
       club_code: session.swimmer.club_code,
       club_name: session.swimmer.club_name,
     },
