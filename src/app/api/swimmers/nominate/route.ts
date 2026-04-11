@@ -171,35 +171,89 @@ export async function POST(req: NextRequest) {
 
   const swimmer = session.swimmer
 
-  // Check max individual events limit
+  // Check entry rules (max total, max per day, max 400m)
   const { data: campaign } = await nt.from('nt_campaigns')
-    .select('max_individual_events')
+    .select('max_individual_events, max_events_per_day, session_plan')
     .eq('id', CAMPAIGN_ID)
     .single()
 
-  if (campaign?.max_individual_events !== null && campaign?.max_individual_events !== undefined) {
+  {
     const [{ data: existingEntries }, { data: existingNoms }] = await Promise.all([
       nt.from('nt_entries')
-        .select('id')
+        .select('id, event_code, event_number')
         .eq('campaign_id', CAMPAIGN_ID)
         .eq('member_id', swimmer.member_id)
         .or('scratched.is.null,scratched.eq.false'),
       nt.from('nt_waitlist_items')
-        .select('id')
+        .select('id, event_code, event_number')
         .eq('campaign_id', CAMPAIGN_ID)
         .eq('member_id', swimmer.member_id)
         .in('status', ['pending', 'approved']),
     ])
 
-    const currentCount = (existingEntries?.length || 0) + (existingNoms?.length || 0)
-    const remaining = campaign.max_individual_events - currentCount
+    const existing = [
+      ...(existingEntries || []).map((e: any) => ({ event_code: e.event_code, event_number: e.event_number })),
+      ...(existingNoms || []).map((n: any) => ({ event_code: n.event_code, event_number: n.event_number })),
+    ]
+    const proposed = nominations.map(n => ({ event_code: n.event_code, event_number: null as string | null }))
+    const allEvents = [...existing, ...proposed]
 
-    if (nominations.length > remaining) {
+    // Rule 1: Max total individual events
+    const maxTotal = campaign?.max_individual_events ?? null
+    if (maxTotal !== null && allEvents.length > maxTotal) {
+      const remaining = Math.max(0, maxTotal - existing.length)
       return NextResponse.json({
         error: remaining <= 0
-          ? `You have reached the maximum of ${campaign.max_individual_events} individual events`
-          : `You can only nominate for ${remaining} more event${remaining === 1 ? '' : 's'} (maximum ${campaign.max_individual_events})`
+          ? `You have reached the maximum of ${maxTotal} individual events`
+          : `You can only nominate for ${remaining} more event${remaining === 1 ? '' : 's'} (maximum ${maxTotal})`
       }, { status: 400 })
+    }
+
+    // Rule 2: Max 400m events (2)
+    const max400m = 2
+    const count400m = allEvents.filter(e => e.event_code.startsWith('400')).length
+    if (count400m > max400m) {
+      return NextResponse.json({
+        error: `Maximum ${max400m} events at 400m distance allowed (would be ${count400m})`
+      }, { status: 400 })
+    }
+
+    // Rule 3: Max events per day
+    const maxPerDay = campaign?.max_events_per_day ?? null
+    if (maxPerDay !== null && campaign?.session_plan) {
+      const sp = campaign.session_plan as any
+      if (sp.firstSession && sp.markers) {
+        // Build event_number -> day map
+        const allEventNumbers = allEvents.map(e => e.event_number).filter(Boolean) as string[]
+        const sortedMarkers = [...sp.markers].sort(
+          (a: any, b: any) => parseInt(a.afterEventNumber) - parseInt(b.afterEventNumber)
+        )
+        const dayMap: Record<string, number> = {}
+        for (const evtNum of allEventNumbers) {
+          let day = sp.firstSession.dayNumber
+          for (const m of sortedMarkers) {
+            if (parseInt(evtNum) > parseInt(m.afterEventNumber)) {
+              day = m.session.dayNumber
+            }
+          }
+          dayMap[evtNum] = day
+        }
+        // Count per day
+        const dayBuckets = new Map<number, number>()
+        for (const e of allEvents) {
+          if (e.event_number) {
+            const day = dayMap[e.event_number]
+            if (day != null) dayBuckets.set(day, (dayBuckets.get(day) || 0) + 1)
+          }
+        }
+        for (const [day, count] of dayBuckets) {
+          if (count > maxPerDay) {
+            return NextResponse.json({
+              error: `Maximum ${maxPerDay} events per day - Day ${day} would have ${count} events`
+            }, { status: 400 })
+          }
+        }
+      }
     }
   }
 
